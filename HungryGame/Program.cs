@@ -8,6 +8,8 @@ using Serilog.Exceptions;
 using Serilog.Sinks.Loki;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
 var requestErrorCount = 0L;
 
 // Add services to the container.
@@ -28,6 +30,8 @@ builder.Host.UseSerilog((context, loggerConfig) => {
 });
 
 var app = builder.Build();
+
+app.MapDefaultEndpoints();
 
 //Path base is needed for running behind a reverse proxy, otherwise the app will not be able to find the static files
 var pathBase = builder.Configuration["PATH_BASE"];

@@ -1,8 +1,7 @@
 {
   "profiles": {
     "foolhearty": {
-      "commandName": "Project",
-      "commandLineArgs": "--PLAY_STYLE SmartyPants"
+      "commandName": "Project"
     },
     "Docker": {
       "commandName": "Docker"

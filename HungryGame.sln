@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31903.59
+# Visual Studio Version 18
+VisualStudioVersion = 18.2.11415.280 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{85938023-1BBA-42AF-9AEC-CDC61F5CDE10}"
 	ProjectSection(SolutionItems) = preProject
@@ -25,6 +25,10 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "massive", "clients\massive\massive.csproj", "{80DD7074-363D-4A80-B972-BB7A1E001954}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Viewer", "clients\Viewer\Viewer.csproj", "{EF4E610F-1E5C-4ABF-930B-29B6D7F63D83}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HungryGame.AppHost", "HungryGame.AppHost\HungryGame.AppHost.csproj", "{CC1278DB-3D20-40AA-9AF1-57F756E9B624}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HungryGame.ServiceDefaults", "HungryGame.ServiceDefaults\HungryGame.ServiceDefaults.csproj", "{A63E776C-41E2-98D6-A4DB-E21DAA1A02F8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -56,6 +60,14 @@ Global
 		{EF4E610F-1E5C-4ABF-930B-29B6D7F63D83}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EF4E610F-1E5C-4ABF-930B-29B6D7F63D83}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EF4E610F-1E5C-4ABF-930B-29B6D7F63D83}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC1278DB-3D20-40AA-9AF1-57F756E9B624}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC1278DB-3D20-40AA-9AF1-57F756E9B624}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC1278DB-3D20-40AA-9AF1-57F756E9B624}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC1278DB-3D20-40AA-9AF1-57F756E9B624}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A63E776C-41E2-98D6-A4DB-E21DAA1A02F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A63E776C-41E2-98D6-A4DB-E21DAA1A02F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A63E776C-41E2-98D6-A4DB-E21DAA1A02F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A63E776C-41E2-98D6-A4DB-E21DAA1A02F8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

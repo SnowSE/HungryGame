@@ -28,7 +28,6 @@ namespace foolhearty
         {
             logger.LogDebug($"Starting with arguments: {string.Join(" ", Environment.GetCommandLineArgs())}");
 
-
             appLifetime.ApplicationStarted.Register(() =>
             {
                 logger.LogDebug("Application has started");
@@ -40,7 +39,7 @@ namespace foolhearty
                         var playerName = "foolhearty." + (config["PLAY_STYLE"] ?? "Foolhearty");
                         logger.LogInformation("playerName {playerName}", playerName);
                         Type playerType = Assembly.GetExecutingAssembly().GetType(playerName) ?? throw new PlayerNotFoundException(playerName);
-                        var playerLogic = serviceProvider.GetService(playerType) as IPlayerLogic;
+                        var playerLogic = (serviceProvider.GetService(playerType) as IPlayerLogic) ?? throw new Exception("Unable to resolve player logic");
 
                         await playerLogic.JoinGameAsync();
                         await playerLogic.PlayAsync(_cancellationTokenSource);
@@ -86,8 +85,6 @@ namespace foolhearty
             // Exit code may be null if the user cancelled via Ctrl+C/SIGTERM
             Environment.ExitCode = _exitCode.GetValueOrDefault(-1);
         }
-
-
     }
 
     public record Location(int row, int column);

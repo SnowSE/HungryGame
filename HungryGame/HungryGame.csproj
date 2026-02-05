@@ -39,4 +39,8 @@
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.1.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\HungryGame.ServiceDefaults\HungryGame.ServiceDefaults.csproj" />
+  </ItemGroup>
+
 </Project>
