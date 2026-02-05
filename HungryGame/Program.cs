@@ -114,13 +114,11 @@ app.MapGet("start", (int numRows, int numCols, string password, int? timeLimit, 
     gameLogic.StartGame(gameStart);
 });
 app.MapGet("reset", (string password, GameLogic gameLogic) => gameLogic.ResetGame(password));
-app.MapGet("board", ([FromServices] GameLogic gameLogic, IMemoryCache memoryCache, ILogger<Program> logger) =>
+app.MapGet("board", ([FromServices] GameLogic gameLogic, IMemoryCache memoryCache) =>
 {
-    logger.LogInformation("Getting /board");
     return memoryCache.GetOrCreate("board",
         cacheEntry =>
         {
-            logger.LogInformation("Cache expired.  Re-computing /board");
             cacheEntry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(1);
             return gameLogic.GetBoardState();
         });

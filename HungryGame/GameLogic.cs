@@ -23,11 +23,15 @@ public class GameLogic
 {
     private readonly object lockForPlayersCellsPillValuesAndSpecialPontValues = new();
     private readonly List<Player> players = new();
+    private readonly Dictionary<string, Location> playerLocations = new();
     private readonly Dictionary<Location, Cell> cells = new();
     private readonly Queue<int> pillValues = new();
     private readonly Dictionary<Location, int> specialPointValues = new();
-    private readonly List<Player> playersThatMovedThisGame = new();
+    private readonly HashSet<Player> playersThatMovedThisGame = new();
+    private readonly HashSet<Location> emptyCells = new();
 
+    private int remainingPills = 0;
+    private int activePlayersCount = 0;
     private int number = 0;
     private long gameStateValue = 0;
     private readonly IConfiguration config;
@@ -86,12 +90,12 @@ public class GameLogic
         initializeGame();
     }
 
-    private void gameOverCallback(object? state)
+    private async void gameOverCallback(object? state)
     {
         log.LogInformation($"Timer ran out.  Game over.");
         Interlocked.Exchange(ref gameStateValue, 3);
 
-        Thread.Sleep(TimeSpan.FromSeconds(5));
+        await Task.Delay(TimeSpan.FromSeconds(5));
 
         resetGame();
         if (TimeLimit.HasValue)
@@ -113,7 +117,7 @@ public class GameLogic
                 throw new TooManyPlayersToStartGameException("too many players");
             }
 
-            var playersThatNeverMoved = players.Except(playersThatMovedThisGame);
+            var playersThatNeverMoved = players.Except(playersThatMovedThisGame).ToList();
             if (playersThatNeverMoved.Any())
             {
                 players.RemoveAll(p => playersThatNeverMoved.Contains(p));
@@ -121,11 +125,17 @@ public class GameLogic
             playersThatMovedThisGame.Clear();
 
             cells.Clear();
+            playerLocations.Clear();
+            emptyCells.Clear();
+            remainingPills = MaxRows * MaxCols;
+            activePlayersCount = players.Count;
+
             foreach (var location in from r in Enumerable.Range(0, MaxRows)
                                      from c in Enumerable.Range(0, MaxCols)
                                      select new Location(r, c))
             {
                 cells.TryAdd(location, new Cell(location, true, null));
+                emptyCells.Add(location);
             }
 
             foreach (var player in players)
@@ -151,6 +161,9 @@ public class GameLogic
                     addToRowIfConflict = !addToRowIfConflict;
                 }
                 cells[newLocation] = cells[newLocation] with { OccupiedBy = player, IsPillAvailable = false };
+                playerLocations[player.Token!] = newLocation;
+                emptyCells.Remove(newLocation);
+                remainingPills--;
                 player.Score = 0;
             }
 
@@ -187,6 +200,8 @@ public class GameLogic
 
         lock (lockForPlayersCellsPillValuesAndSpecialPontValues)
         {
+            playerLocations.Clear();
+            emptyCells.Clear();
             foreach (var p in players)
             {
                 p.Score = 0;
@@ -215,16 +230,18 @@ public class GameLogic
 
             if (gameAlreadyInProgress)
             {
-                var availableSpaces = cells.Where(c => c.Value.OccupiedBy == null).ToList();
-                if (availableSpaces.Any() is false)
+                if (emptyCells.Count == 0)
                 {
                     throw new NoAvailableSpaceException("there is no available space");
                 }
-                var randomIndex = random.Next(availableSpaces.Count);
-                var newLocation = availableSpaces[randomIndex].Key;
+                var randomIndex = random.Next(emptyCells.Count);
+                var newLocation = emptyCells.ElementAt(randomIndex);
                 var origCell = cells[newLocation];
                 var newCell = origCell with { OccupiedBy = joinedPlayer, IsPillAvailable = false };
                 cells[newLocation] = newCell;
+                playerLocations[token] = newLocation;
+                emptyCells.Remove(newLocation);
+                activePlayersCount++;
             }
         }
 
@@ -251,22 +268,24 @@ public class GameLogic
         lock (lockForPlayersCellsPillValuesAndSpecialPontValues)
         {
             player = players.FirstOrDefault(p => p.Token == playerToken);
-            cell = cells.FirstOrDefault(kvp => kvp.Value.OccupiedBy?.Token == playerToken).Value;
-
             if (player == null)
             {
                 throw new PlayerNotFoundException();
             }
 
-            markPlayerAsActive(player);
-
-            var currentPlayer = cell?.OccupiedBy;
-            if (cell == null || currentPlayer == null)
+            if (!playerLocations.TryGetValue(playerToken, out var currentLocation))
             {
                 throw new InvalidMoveException("Player is not currently on the board");
             }
 
-            var currentLocation = cell.Location;
+            cell = cells[currentLocation];
+            markPlayerAsActive(player);
+
+            var currentPlayer = cell.OccupiedBy;
+            if (currentPlayer == null)
+            {
+                throw new InvalidMoveException("Player is not currently on the board");
+            }
 
             if (CurrentGameState != GameState.Eating && CurrentGameState != GameState.Battle)
             {
@@ -321,6 +340,7 @@ public class GameLogic
         {
             player.Score += getPointValue(newLocation);
             ateAPill = true;
+            remainingPills--;
         }
         var newDestinationCell = origDestinationCell with { OccupiedBy = player, IsPillAvailable = false };
 
@@ -331,6 +351,9 @@ public class GameLogic
 
         cells[newLocation] = newDestinationCell;
         cells[currentLocation] = newSourceCell;
+        playerLocations[player.Token!] = newLocation;
+        emptyCells.Remove(newLocation);
+        emptyCells.Add(currentLocation);
 
         changeToBattleModeIfNoMorePillsAvailable();
 
@@ -375,10 +398,9 @@ public class GameLogic
 
     private void checkForWinner()
     {
-        int activePlayers = cells.Count(c => c.Value.OccupiedBy != null);
-        log.LogInformation("checking for winner: {activePlayers} active players", activePlayers);
+        log.LogInformation("checking for winner: {activePlayers} active players", activePlayersCount);
 
-        if (activePlayers == 1)
+        if (activePlayersCount <= 1)
         {
             log.LogInformation("Changing game state from {currentGameState} to {newGameState}", CurrentGameState, (CurrentGameState + 1));
             Interlocked.Increment(ref gameStateValue);
@@ -391,10 +413,17 @@ public class GameLogic
             return false;
 
         log.LogInformation("Removing player from board: {player}", player);
-        var origCell = cells.FirstOrDefault(c => c.Value.OccupiedBy == player);
-        var updatedCell = origCell.Value with { OccupiedBy = null, IsPillAvailable = true };
-        cells[origCell.Key] = updatedCell;
-        return true;
+        if (playerLocations.Remove(player.Token!, out var location))
+        {
+            var origCell = cells[location];
+            var updatedCell = origCell with { OccupiedBy = null, IsPillAvailable = true };
+            cells[location] = updatedCell;
+            emptyCells.Add(location);
+            remainingPills++;
+            activePlayersCount--;
+            return true;
+        }
+        return false;
     }
 
     public IEnumerable<RedactedCell> GetBoardState()
@@ -404,7 +433,7 @@ public class GameLogic
 
         lock (lockForPlayersCellsPillValuesAndSpecialPontValues)
         {
-            return cells.Values.Select(c => new RedactedCell(c));
+            return cells.Values.Select(c => new RedactedCell(c)).ToList();
         }
     }
 
@@ -413,11 +442,9 @@ public class GameLogic
         if (CurrentGameState != GameState.Eating)
             return;
 
-        var remainingPills = cells.Count(c => c.Value.IsPillAvailable);
         if (remainingPills == 0)
         {
-            var playerCount = cells.Count(c => c.Value.OccupiedBy != null);
-            if (playerCount <= 1)
+            if (activePlayersCount <= 1)
             {
                 Interlocked.Exchange(ref gameStateValue, 3);//game over
                 log.LogInformation("Only 1 player left, not going to battle mode - game over.");
