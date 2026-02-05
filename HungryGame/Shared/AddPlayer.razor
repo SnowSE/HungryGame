@@ -1,49 +1,37 @@
-﻿@inject GameLogic gameInfo
+@inject GameLogic gameInfo
 @inject ILogger<AddPlayer> log
 @using System.ComponentModel.DataAnnotations;
 @using Microsoft.AspNetCore.Mvc
 
 <div class="vh-90 w-100" @onkeydown=keyPress tabindex="0" @ref="myDiv">
-    <div class="border-1">
-        @if (joined)
-        {
-            <div class="row">
-                <p>Click on the arrow buttons to move.  Or, use the arrow keys on your keyboard.</p>
+    @if (joined)
+    {
+        <div class="game-card" style="max-width: 400px; margin: 40px auto; text-align: center;">
+            <p style="color: var(--text-secondary); margin-bottom: 24px;">Use arrow buttons or keyboard arrows to move</p>
+            <div class="dpad-container">
+                <button class="dpad-btn dpad-up" @onclick="moveUp">&#x25B2;</button>
+                <button class="dpad-btn dpad-left" @onclick="moveLeft">&#x25C0;</button>
+                <button class="dpad-btn dpad-right" @onclick="moveRight">&#x25B6;</button>
+                <button class="dpad-btn dpad-down" @onclick="moveDown">&#x25BC;</button>
             </div>
-            <div class="row">
-                <div class="col-1"></div>
-                <div class="col-1">
-                    <button @onclick="moveUp">⬆</button>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-1">
-                    <button @onclick="moveLeft">⬅</button>
-                </div>
-                <div class="col-1"></div>
-                <div class="col-1">
-                    <button @onclick="moveRight">➡</button>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-1"></div>
-                <div class="col-1">
-                    <button @onclick="moveDown">⬇</button>
-                </div>
-            </div>
-        }
-        else if (gameAlreadyStarted)
-        {
-            <div class="error">Too late.  Game already started.</div>
-        }
-        else
-        {
-            <EditForm Model="@joinPlayerInfo" OnValidSubmit="@HandleValidSubmit">
-                <InputText DisplayName="Player Name" @bind-Value="joinPlayerInfo.PlayerName" />
-                <button type="submit">Join Player</button>
+        </div>
+    }
+    else if (gameAlreadyStarted)
+    {
+        <div class="error-message" style="max-width: 400px; margin: 40px auto; text-align: center;">
+            Too late &mdash; game already started.
+        </div>
+    }
+    else
+    {
+        <div class="game-card" style="max-width: 400px; margin: 40px auto;">
+            <h3 style="color: var(--neon-green); margin-bottom: 16px;">Join Game</h3>
+            <EditForm Model="@joinPlayerInfo" OnValidSubmit="@HandleValidSubmit" class="join-form">
+                <InputText DisplayName="Player Name" @bind-Value="joinPlayerInfo.PlayerName" placeholder="Enter your name..." class="form-control" />
+                <button type="submit" class="btn btn-primary">Join</button>
             </EditForm>
-        }
-    </div>
+        </div>
+    }
 </div>
 
 

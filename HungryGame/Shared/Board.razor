@@ -1,4 +1,4 @@
-﻿@using System.Text
+@using System.Text
 @inject GameLogic gameInfo
 
 <style>
@@ -13,19 +13,37 @@
     @cellClasses()
 </style>
 
-<div class="gridboard">
-    @for (int row = 0; row < gameInfo.MaxRows; row++)
-    {
-        @for (int col = 0; col < gameInfo.MaxCols; col++)
+<div class="board-wrapper @(gameInfo.CurrentGameState == GameState.Battle ? "battle-mode" : "")">
+    <div class="gridboard">
+        @for (int row = 0; row < gameInfo.MaxRows; row++)
         {
-            var cell = gameInfo.GetCell(row, col) ?? throw new CellNotFoundException();
-            var classname = $"r{row}c{col} border";
+            @for (int col = 0; col < gameInfo.MaxCols; col++)
+            {
+                var cell = gameInfo.GetCell(row, col) ?? throw new CellNotFoundException();
+                var areaClass = $"r{row}c{col}";
+                var player = cell.OccupiedBy;
+                var hasPill = cell.IsPillAvailable;
 
-            <div class=@classname>
-                @(cell.OccupiedBy?.Id.ToString() ?? (cell.IsPillAvailable ? (SharedState?.CellIcon ?? "?") : " "))
-            </div>
+                if (player != null)
+                {
+                    var colorClass = $"player-color-{(player.Id - 1) % 10}";
+                    <div class="@areaClass cell cell-player @colorClass">
+                        <span class="player-marker">@player.Id</span>
+                    </div>
+                }
+                else if (hasPill)
+                {
+                    <div class="@areaClass cell cell-pill">
+                        <span class="pill-icon">@(SharedState?.CellIcon ?? "?")</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="@areaClass cell cell-empty"></div>
+                }
+            }
         }
-    }
+    </div>
 </div>
 
 @code {

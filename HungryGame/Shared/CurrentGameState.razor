@@ -1,11 +1,30 @@
-﻿@inject GameLogic gameInfo
+@inject GameLogic gameInfo
 @implements IDisposable
 
-<h3>Game State: @gameInfo.CurrentGameState</h3>
-@if (@gameInfo.GameEndsOn.HasValue)
-{
-    <h5>Game resets at @gameInfo.GameEndsOn.Value.ToString("h:mm tt") (@timeRemaining remain)</h5>
+@{
+    var stateClass = gameInfo.CurrentGameState switch
+    {
+        GameState.Joining => "state-joining",
+        GameState.Eating => "state-eating",
+        GameState.Battle => "state-battle",
+        GameState.GameOver => "state-gameover",
+        _ => "state-joining"
+    };
 }
+
+<div class="d-flex align-items-center gap-3 flex-wrap">
+    <div class="game-state-badge @stateClass">
+        <span class="state-dot"></span>
+        @gameInfo.CurrentGameState
+    </div>
+
+    @if (gameInfo.GameEndsOn.HasValue)
+    {
+        <span class="game-timer">
+            Resets @gameInfo.GameEndsOn.Value.ToString("h:mm tt") &mdash; @timeRemaining left
+        </span>
+    }
+</div>
 
 @code {
     [CascadingParameter]

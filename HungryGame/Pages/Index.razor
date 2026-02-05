@@ -1,43 +1,41 @@
-﻿@page "/"
+@page "/"
 @inject GameLogic gameInfo
 
 <PageTitle>Hungry Game</PageTitle>
 
-<div class="row">
-    <div class="col">
-        <h1><u>Hungry Game</u></h1>
-    </div>
-
-    <div class="col-auto">
-        <div class="text-end mx-3">
-            <a href="help">Help</a><br />
-            <a href="swagger">Swagger (API Docs)</a><br/>
-            <a href="player">Web-Based Player</a>
-        </div>
+<div class="page-header">
+    <h1 class="game-title">Hungry Game</h1>
+    <div class="nav-links">
+        <a href="help">Help / API Docs</a>
+        <a href="swagger">Swagger</a>
+        <a href="player">Web Player</a>
     </div>
 </div>
 
-<div class="row">
-    <CascadingValue Value=SharedState>
-        <CurrentGameState />
+<CascadingValue Value=SharedState>
+    <CurrentGameState />
+
+    <div class="game-layout mt-3">
         @if (gameInfo.IsGameStarted)
         {
             if (gameInfo.IsGameOver)
             {
-                <div class="border p-5 m=5 col">
-                    <h3 class="text-center">Game Over</h3>
+                <div class="game-main">
+                    <div class="game-over-panel">
+                        <div class="game-over-text">Game Over</div>
+                    </div>
                 </div>
-                <div class="col-auto">
+                <div class="game-sidebar">
                     <ResetGame />
                     <PlayerList />
                 </div>
             }
             else
             {
-                <div class="col-auto">
+                <div class="game-main">
                     <Board />
                 </div>
-                <div class="col-auto">
+                <div class="game-sidebar">
                     @if (gameInfo.IsGameStarted)
                     {
                         <ResetGame />
@@ -48,19 +46,18 @@
         }
         else
         {
-            <div class="col">
+            <div class="game-main">
                 <StartGame />
             </div>
-            <div class="col-auto">
+            <div class="game-sidebar">
                 <PlayerList />
             </div>
         }
-    </CascadingValue>
-</div>
+    </div>
+</CascadingValue>
 
 @code
 {
-
     public SharedStateClass SharedState { get; set; } = new();
 
     protected override void OnInitialized()

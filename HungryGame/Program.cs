@@ -24,12 +24,7 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Host.UseSerilog((context, loggerConfig) => {
     loggerConfig.WriteTo.Console()
-    .Enrich.WithExceptionDetails()
-    .WriteTo.LokiHttp(() => new LokiSinkConfiguration
-    {
-        LokiUrl = "http://loki:3100",
-        LogLabelProvider = new LogLabelProvider()
-    });
+    .Enrich.WithExceptionDetails();
 });
 
 var app = builder.Build();

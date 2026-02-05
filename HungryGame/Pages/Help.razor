@@ -1,38 +1,43 @@
-﻿@page "/help"
+@page "/help"
 @inject NavigationManager navigationManager
 
-<PageTitle>Instructions / Help</PageTitle>
-<div class="h1">
-    <h1>Help &amp; Instructions</h1>
+<PageTitle>Help - Hungry Game</PageTitle>
+
+<div class="page-header">
+    <h1 class="game-title">Help & API</h1>
+    <div class="nav-links">
+        <a href="/">Back to Game</a>
+        <a href="swagger">Swagger Docs</a>
+    </div>
 </div>
 
-<div class="container w-50">
-    <ol>
-        <li>
-            <span>Make a request to</span>
-            <pre>@(myurl)join?userName={yourName}</pre>
-            <span>That call will return a token.  Save that token.</span>
-        </li>
-        <li>
-            To start the game
-            <pre>@(myurl)start?rows={numRows}&cols={numCols}&password={secretPhrase}</pre>
-        </li>
-        <li>
-            <span>Once the game starts, send requests to </span>
-            <pre>@(myurl)move/left?token={yourToken}</pre>
-            or
-            <pre>@(myurl)move/right?token={yourToken}</pre>
-            or
-            <pre>@(myurl)move/up?token={yourToken}</pre>
-            or
-            <pre>@(myurl)move/down?token={yourToken}</pre>
-        </li>
-        <li>
-            To reset the game
-            <pre>@(myurl)reset?password={secretPhrase}</pre>
-        </li>
-    </ol>
+<div class="help-container">
+    <div class="game-card">
+        <ol>
+            <li>
+                <span>Join the game by making a request to:</span>
+                <pre>@(myurl)join?userName={yourName}</pre>
+                <span style="color: var(--text-muted);">This returns a token. Save it &mdash; you'll need it to move.</span>
+            </li>
+            <li>
+                Start the game:
+                <pre>@(myurl)start?rows={numRows}&amp;cols={numCols}&amp;password={secretPhrase}</pre>
+            </li>
+            <li>
+                <span>Once the game starts, send move requests:</span>
+                <pre>@(myurl)move/up?token={yourToken}</pre>
+                <pre>@(myurl)move/down?token={yourToken}</pre>
+                <pre>@(myurl)move/left?token={yourToken}</pre>
+                <pre>@(myurl)move/right?token={yourToken}</pre>
+            </li>
+            <li>
+                Reset the game:
+                <pre>@(myurl)reset?password={secretPhrase}</pre>
+            </li>
+        </ol>
+    </div>
 </div>
+
 @code {
     string myurl;
 
@@ -40,5 +45,4 @@
     {
         myurl = navigationManager.BaseUri;
     }
-
 }

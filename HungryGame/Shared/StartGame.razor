@@ -1,15 +1,16 @@
-﻿@inject GameLogic gameInfo
+@inject GameLogic gameInfo
 @inject IConfiguration config
 
-<EditForm Model="@NewGame" OnValidSubmit="@HandleValidSubmit" class="border p-3">
+<EditForm Model="@NewGame" OnValidSubmit="@HandleValidSubmit" class="start-game-form">
+    <h3 style="margin-bottom: 20px; color: var(--neon-green);">New Game</h3>
     <div class="form-group">
         <label>
             Rows
-            <InputNumber DisplayName="Rows" @bind-Value="NewGame.NumRows" style="width: 75px" class="form-control" />
+            <InputNumber DisplayName="Rows" @bind-Value="NewGame.NumRows" style="width: 80px" class="form-control" />
         </label>
         <label>
             Columns
-            <InputNumber DisplayName="Columns" @bind-Value="NewGame.NumColumns" style="width: 75px" class="form-control" />
+            <InputNumber DisplayName="Columns" @bind-Value="NewGame.NumColumns" style="width: 80px" class="form-control" />
         </label>
         <label>
             Cell Icon
@@ -20,27 +21,26 @@
             <InputText type="password" DisplayName="Password" @bind-Value="NewGame.SecretCode" size="8" class="form-control" />
         </label>
     </div>
-    <div class="form-group mt-2 mb-2 row ms-0">
-        <div class="form-check col-auto">
+    <div class="form-group mt-3 mb-3" style="align-items: center;">
+        <div class="form-check">
             <InputCheckbox id="isTimed" DisplayName="Is Timed" @bind-Value="NewGame.IsTimed" class="form-check-input" />
-            <label class="form-label" for="isTimed">Is Timed</label>
+            <label class="form-label" for="isTimed" style="text-transform: none; font-size: 0.9rem;">Timed Game</label>
         </div>
         @if (NewGame.IsTimed)
         {
-            <label class="col-auto">
-                Time Limit (in minutes)
-                <input type="number" class="form-control" min=1 max=10 size="3" @bind="NewGame.TimeLimitInMinutes" />
+            <label>
+                Minutes
+                <input type="number" class="form-control" min=1 max=10 size="3" style="width: 80px" @bind="NewGame.TimeLimitInMinutes" />
             </label>
         }
     </div>
     <div class="form-group">
-        <button class="btn btn-primary" type="submit">Start Game</button>
+        <button class="btn btn-primary" type="submit">Launch Game</button>
 
         @if (startGameError != null)
         {
-            <div class="mt-2 alert alert-warning alert-dismissible fade show" role="alert">
-                <strong>Invalid Password!</strong><br/>
-                <img src="https://static.tumblr.com/ixshp06/YP6m2221z/dennis_nedry_magic_word_header.gif" />
+            <div class="error-message mt-3">
+                <strong>Access Denied</strong> &mdash; Invalid password
             </div>
         }
     </div>

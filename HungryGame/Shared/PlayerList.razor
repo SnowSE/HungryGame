@@ -1,34 +1,55 @@
-﻿@inject GameLogic gameInfo
+@inject GameLogic gameInfo
 
-<div class="border m-3 p-1">
-    @if (gameInfo.IsGameStarted)
-    {
-        <h3>Leader Board</h3>
-    }
-    else
-    {
-        <h3>Player List</h3>
-    }
-    <table>
-        <tr>
-            <th>#</th>
-            <th>Name</th>
-            @if (gameInfo.IsGameStarted)
-            {
-                <th>Score</th>
-            }
-        </tr>
-        @foreach (var p in gameInfo.GetPlayersByScoreDescending())
+<div class="leaderboard">
+    <h3 class="leaderboard-header">
+        @if (gameInfo.IsGameStarted)
         {
+            <text>Leaderboard</text>
+        }
+        else
+        {
+            <text>Players</text>
+        }
+    </h3>
+    <table>
+        <thead>
             <tr>
-                <td align="center">@p.Id</td>
-                <td>@p.Name</td>
+                <th>#</th>
+                <th>Player</th>
                 @if (gameInfo.IsGameStarted)
                 {
-                    <td align="right">@p.Score.ToString("n0")</td>
+                    <th style="text-align: right">Score</th>
                 }
             </tr>
-        }
+        </thead>
+        <tbody>
+            @{ var rank = 0; }
+            @foreach (var p in gameInfo.GetPlayersByScoreDescending())
+            {
+                rank++;
+                var colorClass = $"player-color-{(p.Id - 1) % 10}";
+                <tr>
+                    <td class="player-rank">
+                        @if (rank == 1 && gameInfo.IsGameStarted)
+                        {
+                            <text>&#x1F451;</text>
+                        }
+                        else
+                        {
+                            @rank
+                        }
+                    </td>
+                    <td>
+                        <span class="player-id-badge" style="@GetPlayerBadgeStyle(p.Id)">@p.Id</span>
+                        &nbsp;@p.Name
+                    </td>
+                    @if (gameInfo.IsGameStarted)
+                    {
+                        <td class="player-score">@p.Score.ToString("n0")</td>
+                    }
+                </tr>
+            }
+        </tbody>
     </table>
 </div>
 
@@ -36,5 +57,16 @@
     protected override void OnInitialized()
     {
         gameInfo.GameStateChanged += (_, _) => InvokeAsync(() => StateHasChanged());
+    }
+
+    private static readonly string[] PlayerColors = {
+        "#00ff88", "#ff006e", "#00b4d8", "#ffd60a", "#ff8c00",
+        "#b388ff", "#00ffdd", "#ff66aa", "#88ff00", "#ff8866"
+    };
+
+    private string GetPlayerBadgeStyle(int playerId)
+    {
+        var color = PlayerColors[(playerId - 1) % PlayerColors.Length];
+        return $"background: {color};";
     }
 }
