@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.2.11415.280 d18.0
+VisualStudioVersion = 18.2.11415.280
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{85938023-1BBA-42AF-9AEC-CDC61F5CDE10}"
 	ProjectSection(SolutionItems) = preProject
@@ -19,8 +19,6 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "foolhearty", "clients\foolhearty\foolhearty.csproj", "{B098D1B7-99C2-4350-9CD8-A5BBFEA87442}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HungryGame", "HungryGame\HungryGame.csproj", "{683F965A-7786-4A7A-A288-CECB44528C4C}"
-EndProject
-Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{B3063797-7925-4601-890E-20EE564E3500}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "massive", "clients\massive\massive.csproj", "{80DD7074-363D-4A80-B972-BB7A1E001954}"
 EndProject
@@ -48,10 +46,6 @@ Global
 		{683F965A-7786-4A7A-A288-CECB44528C4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{683F965A-7786-4A7A-A288-CECB44528C4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{683F965A-7786-4A7A-A288-CECB44528C4C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B3063797-7925-4601-890E-20EE564E3500}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B3063797-7925-4601-890E-20EE564E3500}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B3063797-7925-4601-890E-20EE564E3500}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B3063797-7925-4601-890E-20EE564E3500}.Release|Any CPU.Build.0 = Release|Any CPU
 		{80DD7074-363D-4A80-B972-BB7A1E001954}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{80DD7074-363D-4A80-B972-BB7A1E001954}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{80DD7074-363D-4A80-B972-BB7A1E001954}.Release|Any CPU.ActiveCfg = Release|Any CPU

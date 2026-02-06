@@ -1,8 +1,0 @@
-version: '3.4'
-
-services:
-  hungrygame:
-    image: ${DOCKER_REGISTRY-}hungrygame
-    build:
-      context: .
-      dockerfile: HungryGame/Dockerfile
