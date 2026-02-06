@@ -2,7 +2,14 @@ using Aspire.Hosting;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-var hungrygame = builder.AddProject<Projects.HungryGame>("hungrygame");
+var boardHeight = builder.AddParameter("boardHeight", "20");
+var boardWidth = builder.AddParameter("boardWidth", "30");
+var secretCode = builder.AddParameter("secretCode", secret: true);
+
+var hungrygame = builder.AddProject<Projects.HungryGame>("hungrygame")
+    .WithEnvironment("BOARD_HEIGHT", boardHeight)
+    .WithEnvironment("BOARD_WIDTH", boardWidth)
+    .WithEnvironment("SECRET_CODE", secretCode);
 
 builder.AddProject<Projects.massive>("massive")
     .WithEnvironment("SERVER", hungrygame.GetEndpoint("http"))

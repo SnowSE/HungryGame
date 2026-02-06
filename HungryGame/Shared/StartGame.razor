@@ -54,6 +54,12 @@
     [CascadingParameter]
     public SharedStateClass SharedState { get; set; }
 
+    protected override void OnInitialized()
+    {
+        NewGame.NumRows = config.GetValue<int>("BOARD_HEIGHT", 20);
+        NewGame.NumColumns = config.GetValue<int>("BOARD_WIDTH", 30);
+    }
+
     private async Task HandleValidSubmit()
     {
         if (NewGame.SecretCode != config["SECRET_CODE"])
