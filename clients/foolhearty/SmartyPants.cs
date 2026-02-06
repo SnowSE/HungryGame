@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Net.Http.Json;
 
 namespace foolhearty;
@@ -11,10 +12,67 @@ public class SmartyPants : BasePlayerLogic
     private List<Cell> board;
     private IEnumerable<PlayerInfo> players;
     private string gameState;
+    private int rateLimitCount = 0;
+    private int requestCount = 0;
+    private DateTime lastRateLimitCheck = DateTime.UtcNow;
+    private int currentDelayMs = 0;
 
     public SmartyPants(IConfiguration config, ILogger<SmartyPants> logger) : base(config)
     {
         this.logger = logger;
+    }
+
+    private void AdjustThrottling()
+    {
+        var elapsed = DateTime.UtcNow - lastRateLimitCheck;
+        if (elapsed.TotalSeconds >= 10)
+        {
+            var rateLimitRate = requestCount > 0 ? (double)rateLimitCount / requestCount : 0;
+            
+            if (rateLimitRate > 0.1) // More than 10% rate limited
+            {
+                currentDelayMs = Math.Min(currentDelayMs + 50, 500);
+                logger.LogWarning("High rate limit rate ({rate:P}). Increasing delay to {delay}ms", rateLimitRate, currentDelayMs);
+            }
+            else if (rateLimitRate < 0.02 && currentDelayMs > 0) // Less than 2% rate limited
+            {
+                currentDelayMs = Math.Max(currentDelayMs - 25, 0);
+                logger.LogInformation("Low rate limit rate ({rate:P}). Decreasing delay to {delay}ms", rateLimitRate, currentDelayMs);
+            }
+            
+            rateLimitCount = 0;
+            requestCount = 0;
+            lastRateLimitCheck = DateTime.UtcNow;
+        }
+    }
+
+    private async Task<T> ExecuteWithRetry<T>(Func<Task<T>> action, int maxRetries = 3)
+    {
+        AdjustThrottling();
+        
+        if (currentDelayMs > 0)
+        {
+            await Task.Delay(currentDelayMs);
+        }
+
+        Interlocked.Increment(ref requestCount);
+        
+        int retryCount = 0;
+        while (true)
+        {
+            try
+            {
+                return await action();
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests && retryCount < maxRetries)
+            {
+                Interlocked.Increment(ref rateLimitCount);
+                retryCount++;
+                var delay = TimeSpan.FromSeconds(Math.Pow(2, retryCount));
+                logger.LogWarning("Rate limited. Waiting {delay} seconds before retry {retryCount}/{maxRetries}", delay.TotalSeconds, retryCount, maxRetries);
+                await Task.Delay(delay);
+            }
+        }
     }
 
     public override string PlayerName => config["PLAYER_NAME"] ?? "SmartyPants";
@@ -22,6 +80,8 @@ public class SmartyPants : BasePlayerLogic
     public override async Task PlayAsync(CancellationTokenSource cancellationTokenSource)
     {
         logger.LogInformation("SmartyPants starting to play");
+
+        await waitForGameToStart(cancellationTokenSource.Token);
 
         var timer = new Timer(getBoard, null, 0, 1_000);
         var lastLocation = new Location(0, 0);
@@ -46,13 +106,13 @@ public class SmartyPants : BasePlayerLogic
             }
 
             direction = inferDirection(moveResult?.newLocation, destination);
-            moveResult = await httpClient.GetFromJsonAsync<MoveResult>($"{url}/move/{direction}?token={token}");
+            moveResult = await ExecuteWithRetry(() => httpClient.GetFromJsonAsync<MoveResult>($"{url}/move/{direction}?token={token}"));
 
             while (moveResult?.newLocation == lastLocation && !cancellationTokenSource.IsCancellationRequested)//didn't move
             {
                 logger.LogInformation($"Didn't move when I went {direction}, trying to go {tryNextDirection(direction)}");
                 direction = tryNextDirection(direction);
-                moveResult = await httpClient.GetFromJsonAsync<MoveResult>($"{url}/move/{direction}?token={token}");
+                moveResult = await ExecuteWithRetry(() => httpClient.GetFromJsonAsync<MoveResult>($"{url}/move/{direction}?token={token}"));
             }
 
             if (moveResult?.ateAPill == false)
@@ -68,7 +128,7 @@ public class SmartyPants : BasePlayerLogic
             while (map.ContainsKey(nextLocation) && map[nextLocation].isPillAvailable)
             {
                 logger.LogInformation("In a groove!  Keep going!");
-                lastRequest = httpClient.GetFromJsonAsync<MoveResult>($"{url}/move/{direction}?token={token}");
+                lastRequest = ExecuteWithRetry(() => httpClient.GetFromJsonAsync<MoveResult>($"{url}/move/{direction}?token={token}"));
                 nextLocation = advance(nextLocation, direction);
             }
             if (lastRequest != null)
@@ -119,17 +179,24 @@ public class SmartyPants : BasePlayerLogic
 
     private async void getBoard(object _)
     {
-        var newBoard = await getBoardAsync();
-        var newMap = new Dictionary<Location, Cell>(newBoard.Select(c => new KeyValuePair<Location, Cell>(c.location, c)));
-        Interlocked.Exchange(ref board, newBoard);
-        Interlocked.Exchange(ref map, newMap);
+        try
+        {
+            var newBoard = await ExecuteWithRetry(() => getBoardAsync());
+            var newMap = new Dictionary<Location, Cell>(newBoard.Select(c => new KeyValuePair<Location, Cell>(c.location, c)));
+            Interlocked.Exchange(ref board, newBoard);
+            Interlocked.Exchange(ref map, newMap);
 
-        var newPlayers = await httpClient.GetFromJsonAsync<IEnumerable<PlayerInfo>>($"{url}/players");
-        Interlocked.Exchange(ref players, newPlayers);
+            var newPlayers = await ExecuteWithRetry(() => httpClient.GetFromJsonAsync<IEnumerable<PlayerInfo>>($"{url}/players"));
+            Interlocked.Exchange(ref players, newPlayers);
 
-        var newGameState = await httpClient.GetStringAsync($"{url}/state");
-        Interlocked.Exchange(ref gameState, newGameState);
-        logger.LogInformation("UPDATED BOARD");
+            var newGameState = await ExecuteWithRetry(() => httpClient.GetStringAsync($"{url}/state"));
+            Interlocked.Exchange(ref gameState, newGameState);
+            logger.LogInformation("UPDATED BOARD");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error updating board");
+        }
     }
 
     private async Task<MoveResult> moveFromTo(MoveResult current, Location destination)
@@ -141,13 +208,13 @@ public class SmartyPants : BasePlayerLogic
         Task<MoveResult> result = null;
         for (int i = 0; i < Math.Abs(rowDelta); i++)
         {
-            result = httpClient.GetFromJsonAsync<MoveResult>($"{url}/move/{direction}?token={token}");
+            result = ExecuteWithRetry(() => httpClient.GetFromJsonAsync<MoveResult>($"{url}/move/{direction}?token={token}"));
         }
 
         direction = colDelta < 0 ? "left" : "right";
         for (int i = 0; i < Math.Abs(colDelta); i++)
         {
-            result = httpClient.GetFromJsonAsync<MoveResult>($"{url}/move/{direction}?token={token}");
+            result = ExecuteWithRetry(() => httpClient.GetFromJsonAsync<MoveResult>($"{url}/move/{direction}?token={token}"));
         }
 
         if (result != null)

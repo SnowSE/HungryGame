@@ -1,48 +1,185 @@
 @using System.Text
 @inject GameLogic gameInfo
+@inject IJSRuntime JS
 
 <style>
     .gridboard {
         display: grid;
-        grid-template-columns: @gridTemplateColumns;
-        grid-template-rows: @gridTemplateRows;
+        grid-template-columns: repeat(@gameInfo.MaxCols, 1fr);
+        grid-template-rows: repeat(@gameInfo.MaxRows, 1fr);
         gap: 0px 0px;
-        grid-template-areas: @gridTemplateAreas()
+        width: 100%;
+        aspect-ratio: @gameInfo.MaxCols / @gameInfo.MaxRows;
     }
 
-    @cellClasses()
+    .board-container {
+        position: relative;
+        background: #1a1a1a;
+        padding: 1rem;
+        border-radius: 8px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .board-wrapper {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .fullscreen-btn {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        z-index: 1100;
+        opacity: 0.8;
+        transition: all 0.2s ease;
+        background: rgba(0, 255, 136, 0.2);
+        border: 2px solid rgba(0, 255, 136, 0.5);
+        color: #00ff88;
+        padding: 8px;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+    }
+
+    .fullscreen-btn:hover {
+        opacity: 1;
+        background: rgba(0, 255, 136, 0.4);
+        box-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+        transform: scale(1.1);
+    }
+
+    .fullscreen-btn svg {
+        width: 20px;
+        height: 20px;
+        fill: currentColor;
+    }
+
+    :fullscreen .board-container {
+        width: 100vw;
+        height: 100vh;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0;
+        background: black;
+        overflow: visible;
+    }
+
+    :fullscreen .gridboard {
+        --cols: @gameInfo.MaxCols;
+        --rows: @gameInfo.MaxRows;
+        /* Calculate sizes based on viewport min to ensure it always fits */
+        width: calc(100vmin * (var(--cols) / var(--vmax-dim)));
+        height: calc(100vmin * (var(--rows) / var(--vmax-dim)));
+        --vmax-dim: @(Math.Max(gameInfo.MaxCols, gameInfo.MaxRows));
+        
+        /* Fallback / secondary approach if the above is still problematic */
+        width: min(98vw, calc(98vh * var(--cols) / var(--rows)));
+        height: min(98vh, calc(98vw * var(--rows) / var(--cols)));
+        
+        max-width: none;
+        max-height: none;
+    }
+
+    .fullscreen-leaderboard {
+        display: none;
+    }
+
+    :fullscreen .fullscreen-leaderboard {
+        display: block;
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        width: 320px;
+        max-height: 85vh;
+        z-index: 1000;
+        pointer-events: auto;
+        font-size: 0.9rem;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+        overflow: visible;
+    }
+
+    /* Override standard leaderboard styles for the floating overlay */
+    :fullscreen .fullscreen-leaderboard .leaderboard {
+        background: rgba(10, 10, 26, 0.6) !important;
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(0, 255, 136, 0.3);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    :fullscreen .fullscreen-leaderboard .leaderboard-header {
+        background: rgba(0, 255, 136, 0.15) !important;
+        padding: 12px 18px;
+    }
+
+    :fullscreen .fullscreen-leaderboard .leaderboard-scroll {
+        max-height: 60vh;
+        background: transparent !important;
+    }
+
+    :fullscreen .fullscreen-leaderboard td {
+        background: transparent !important;
+    }
+
+    :fullscreen .board-wrapper {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 0;
+        margin: 0;
+    }
 </style>
 
-<div class="board-wrapper @(gameInfo.CurrentGameState == GameState.Battle ? "battle-mode" : "")">
-    <div class="gridboard">
-        @for (int row = 0; row < gameInfo.MaxRows; row++)
-        {
-            @for (int col = 0; col < gameInfo.MaxCols; col++)
-            {
-                var cell = gameInfo.GetCell(row, col) ?? throw new CellNotFoundException();
-                var areaClass = $"r{row}c{col}";
-                var player = cell.OccupiedBy;
-                var hasPill = cell.IsPillAvailable;
+<div id="game-board-root" class="board-container">
+    <button class="fullscreen-btn" @onclick="ToggleFullScreen" title="Toggle Fullscreen">
+        <svg viewBox="0 0 24 24">
+            <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+        </svg>
+    </button>
 
-                if (player != null)
+    <div class="fullscreen-leaderboard">
+        <PlayerList />
+    </div>
+
+    <div class="board-wrapper @(gameInfo.CurrentGameState == GameState.Battle ? "battle-mode" : "")">
+        <div class="gridboard">
+            @for (int row = 0; row < gameInfo.MaxRows; row++)
+            {
+                @for (int col = 0; col < gameInfo.MaxCols; col++)
                 {
-                    var colorClass = $"player-color-{(player.Id - 1) % 10}";
-                    <div class="@areaClass cell cell-player @colorClass">
-                        <span class="player-marker">@player.Id</span>
-                    </div>
-                }
-                else if (hasPill)
-                {
-                    <div class="@areaClass cell cell-pill">
-                        <span class="pill-icon">@(SharedState?.CellIcon ?? "?")</span>
-                    </div>
-                }
-                else
-                {
-                    <div class="@areaClass cell cell-empty"></div>
+                    var cell = gameInfo.GetCell(row, col) ?? throw new CellNotFoundException();
+                    var player = cell.OccupiedBy;
+                    var hasPill = cell.IsPillAvailable;
+
+                    if (player != null)
+                    {
+                        var colorClass = $"player-color-{(player.Id - 1) % 10}";
+                        <div class="cell cell-player @colorClass">
+                            <span class="player-marker">@player.Id</span>
+                        </div>
+                    }
+                    else if (hasPill)
+                    {
+                        <div class="cell cell-pill">
+                            <span class="pill-icon">@(SharedState?.CellIcon ?? "?")</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="cell cell-empty"></div>
+                    }
                 }
             }
-        }
+        </div>
     </div>
 </div>
 
@@ -51,6 +188,20 @@
     [CascadingParameter]
     public SharedStateClass SharedState{  get;  set; }
 
+    private async Task ToggleFullScreen()
+    {
+        await JS.InvokeVoidAsync("eval", @"
+            var elem = document.getElementById('game-board-root');
+            if (!document.fullscreenElement) {
+                elem.requestFullscreen().catch(err => {
+                    console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        ");
+    }
+
     protected override void OnInitialized()
     {
         gameInfo.GameStateChanged += (_, _) => InvokeAsync(() => StateHasChanged());
@@ -58,32 +209,4 @@
 
     public string gridTemplateRows => String.Join(" ", Enumerable.Repeat("1fr", gameInfo.MaxRows));
     public string gridTemplateColumns => String.Join(" ", Enumerable.Repeat("1fr", gameInfo.MaxCols));
-
-    public string gridTemplateAreas()
-    {
-        var sb = new StringBuilder();
-        for(int row=0;row<gameInfo.MaxRows;row++)
-        {
-            sb.Append("\"");
-            for(int col=0;col<gameInfo.MaxCols;col++)
-            {
-                sb.Append($"r{row}c{col} ");
-            }
-            sb.AppendLine("\"");
-        }
-        return sb.ToString();
-    }
-
-    public string cellClasses()
-    {
-        var sb = new StringBuilder();
-        for(int row=0;row<gameInfo.MaxRows;row++)
-        {
-            for(int col=0;col<gameInfo.MaxCols;col++)
-            {
-                sb.AppendLine($".r{row}c{col} {{grid-area: r{row}c{col};}} ");
-            }
-        }
-        return sb.ToString();
-    }
 }

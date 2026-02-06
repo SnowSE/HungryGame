@@ -1,16 +1,34 @@
 using HungryGame;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Caching.Memory;
 using Prometheus;
 using Serilog;
 using Serilog.Exceptions;
 using Serilog.Sinks.Loki;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 var requestErrorCount = 0L;
+
+// Rate Limiting Configuration
+var permitLimit = builder.Configuration.GetValue<int>("RateLimit:PermitLimit", 100);
+var windowSeconds = builder.Configuration.GetValue<int>("RateLimit:WindowSeconds", 1);
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddFixedWindowLimiter(policyName: "fixed", options =>
+    {
+        options.PermitLimit = permitLimit;
+        options.Window = TimeSpan.FromSeconds(windowSeconds);
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = 0;
+    });
+});
 
 // Add services to the container.
 builder.Services.AddRazorPages();
@@ -76,6 +94,7 @@ app.Use(async (context, next) =>
 });
 
 app.UseRouting();
+app.UseRateLimiter();
 app.MapBlazorHub();
 app.UseSwagger();
 app.UseSwaggerUI(c => c.SwaggerEndpoint("v1/swagger.json", $"{builder.Environment.ApplicationName} v1"));
@@ -87,16 +106,16 @@ app.MapGet("join", (string? userName, string? playerName, GameLogic gameLogic) =
 {
     var name = userName ?? playerName ?? throw new ArgumentNullException(nameof(userName), "Must define either a userName or playerName in the query string.");
     return gameLogic.JoinPlayer(name);
-});
-app.MapGet("move/left", (string token, GameLogic gameLogic) => gameLogic.Move(token, Direction.Left));
-app.MapGet("move/right", (string token, GameLogic gameLogic) => gameLogic.Move(token, Direction.Right));
-app.MapGet("move/up", (string token, GameLogic gameLogic) => gameLogic.Move(token, Direction.Up));
-app.MapGet("move/down", (string token, GameLogic gameLogic) => gameLogic.Move(token, Direction.Down));
+}).RequireRateLimiting("fixed");
+app.MapGet("move/left", (string token, GameLogic gameLogic) => gameLogic.Move(token, Direction.Left)).RequireRateLimiting("fixed");
+app.MapGet("move/right", (string token, GameLogic gameLogic) => gameLogic.Move(token, Direction.Right)).RequireRateLimiting("fixed");
+app.MapGet("move/up", (string token, GameLogic gameLogic) => gameLogic.Move(token, Direction.Up)).RequireRateLimiting("fixed");
+app.MapGet("move/down", (string token, GameLogic gameLogic) => gameLogic.Move(token, Direction.Down)).RequireRateLimiting("fixed");
 app.MapGet("players", ([FromServices] GameLogic gameLogic, IMemoryCache memoryCache) =>
 {
     return memoryCache.GetOrCreate("players", cacheEntry =>
     {
-        cacheEntry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(1);
+        cacheEntry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMilliseconds(100);
         return gameLogic.GetPlayersByScoreDescending().Select(p => new { p.Name, p.Id, p.Score });
     });
 
@@ -112,14 +131,14 @@ app.MapGet("start", (int numRows, int numCols, string password, int? timeLimit, 
         TimeLimitInMinutes = timeLimit,
     };
     gameLogic.StartGame(gameStart);
-});
-app.MapGet("reset", (string password, GameLogic gameLogic) => gameLogic.ResetGame(password));
+}).RequireRateLimiting("fixed");
+app.MapGet("reset", (string password, GameLogic gameLogic) => gameLogic.ResetGame(password)).RequireRateLimiting("fixed");
 app.MapGet("board", ([FromServices] GameLogic gameLogic, IMemoryCache memoryCache) =>
 {
     return memoryCache.GetOrCreate("board",
         cacheEntry =>
         {
-            cacheEntry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(1);
+            cacheEntry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMilliseconds(100);
             return gameLogic.GetBoardState();
         });
 });
@@ -127,7 +146,7 @@ app.MapGet("state", ([FromServices] GameLogic gameLogic, IMemoryCache memoryCach
 {
     return memoryCache.GetOrCreate("state", cacheEntry =>
    {
-       cacheEntry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(1);
+       cacheEntry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMilliseconds(100);
        return gameLogic.CurrentGameState.ToString();
    });
 });

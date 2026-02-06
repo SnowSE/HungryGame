@@ -12,7 +12,7 @@ public class SimpleHostedService : IHostedService
     private readonly IServiceProvider serviceProvider;
     private readonly MassiveClient client;
     private CancellationTokenSource? _cancellationTokenSource;
-    private string DEFAULT_CLIENT_COUNT = "200";
+    private string DEFAULT_CLIENT_COUNT = "25";
 
     private Task? _applicationTask;
     private int? _exitCode;

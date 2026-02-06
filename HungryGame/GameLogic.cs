@@ -174,9 +174,9 @@ public class GameLogic
             }
 
             if (players.Count > 20 || pillValues.Count > 10_000)
-                stateChangeFrequency = TimeSpan.FromMilliseconds(750);
+                stateChangeFrequency = TimeSpan.FromMilliseconds(200);
             else
-                stateChangeFrequency = TimeSpan.FromMilliseconds(250);
+                stateChangeFrequency = TimeSpan.FromMilliseconds(50);
 
             Interlocked.Increment(ref gameStateValue);
         }

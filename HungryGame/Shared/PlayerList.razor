@@ -1,59 +1,132 @@
 @inject GameLogic gameInfo
 
+<style>
+    .leaderboard-controls {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .leaderboard-controls button {
+        font-size: 0.7rem;
+        padding: 2px 5px;
+        background: #333;
+        border: 1px solid #555;
+        color: #eee;
+        border-radius: 4px;
+        cursor: pointer;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .leaderboard-controls button.active {
+        background: #007bff;
+        border-color: #0056b3;
+    }
+
+    .leaderboard-header {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 80px;
+    }
+
+    .leaderboard-scroll {
+        max-height: 80vh;
+        overflow-y: auto;
+        border: 1px solid #444;
+        border-radius: 4px;
+    }
+
+    .leaderboard-collapsed {
+        display: none;
+    }
+</style>
+
 <div class="leaderboard">
-    <h3 class="leaderboard-header">
-        @if (gameInfo.IsGameStarted)
-        {
-            <text>Leaderboard</text>
-        }
-        else
-        {
-            <text>Players</text>
-        }
-    </h3>
-    <table>
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Player</th>
-                @if (gameInfo.IsGameStarted)
-                {
-                    <th style="text-align: right">Score</th>
-                }
-            </tr>
-        </thead>
-        <tbody>
-            @{ var rank = 0; }
-            @foreach (var p in gameInfo.GetPlayersByScoreDescending())
+    <div class="leaderboard-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h3 class="mb-0" style="font-size: inherit; font-family: inherit; font-weight: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit;">
+            @if (gameInfo.IsGameStarted)
             {
-                rank++;
-                var colorClass = $"player-color-{(p.Id - 1) % 10}";
-                <tr>
-                    <td class="player-rank">
-                        @if (rank == 1 && gameInfo.IsGameStarted)
-                        {
-                            <text>&#x1F451;</text>
-                        }
-                        else
-                        {
-                            @rank
-                        }
-                    </td>
-                    <td>
-                        <span class="player-id-badge" style="@GetPlayerBadgeStyle(p.Id)">@p.Id</span>
-                        &nbsp;@p.Name
-                    </td>
-                    @if (gameInfo.IsGameStarted)
-                    {
-                        <td class="player-score">@p.Score.ToString("n0")</td>
-                    }
-                </tr>
+                <text>Leaderboard</text>
             }
-        </tbody>
-    </table>
+            else
+            {
+                <text>Players</text>
+            }
+        </h3>
+        <div class="leaderboard-controls">
+            <button class="@(viewMode == ViewMode.Full ? "active" : "")" @onclick="() => SetViewMode(ViewMode.Full)">Full</button>
+            <button class="@(viewMode == ViewMode.Top5 ? "active" : "")" @onclick="() => SetViewMode(ViewMode.Top5)">Top 5</button>
+            <button class="@(viewMode == ViewMode.Collapsed ? "active" : "")" @onclick="() => SetViewMode(ViewMode.Collapsed)">Off</button>
+        </div>
+    </div>
+
+    @if (viewMode != ViewMode.Collapsed)
+    {
+        <div class="@(viewMode == ViewMode.Full ? "leaderboard-scroll" : "")">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Player</th>
+                        @if (gameInfo.IsGameStarted)
+                        {
+                            <th style="text-align: right">Score</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var rank = 0;
+                        var players = gameInfo.GetPlayersByScoreDescending();
+                        if (viewMode == ViewMode.Top5)
+                        {
+                            players = players.Take(5);
+                        }
+                    }
+                    @foreach (var p in players)
+                    {
+                        rank++;
+                        var colorClass = $"player-color-{(p.Id - 1) % 10}";
+                        <tr>
+                            <td class="player-rank">
+                                @if (rank == 1 && gameInfo.IsGameStarted)
+                                {
+                                    <text>&#x1F451;</text>
+                                }
+                                else
+                                {
+                                    @rank
+                                }
+                            </td>
+                            <td>
+                                <span class="player-id-badge" style="@GetPlayerBadgeStyle(p.Id)">@p.Id</span>
+                                &nbsp;@p.Name
+                            </td>
+                            @if (gameInfo.IsGameStarted)
+                            {
+                                <td class="player-score">@p.Score.ToString("n0")</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 </div>
 
 @code {
+    public enum ViewMode { Full, Top5, Collapsed }
+    private ViewMode viewMode = ViewMode.Full;
+
+    private void SetViewMode(ViewMode mode)
+    {
+        viewMode = mode;
+        StateHasChanged();
+    }
+
     protected override void OnInitialized()
     {
         gameInfo.GameStateChanged += (_, _) => InvokeAsync(() => StateHasChanged());
