@@ -43,5 +43,5 @@ jobs:
         with:
           app-name: 'hungrygame'
           slot-name: 'Production'
-          package: ./${{env.DOTNET_ROOT}}/myapp
+          package: ${{env.DOTNET_ROOT}}/myapp
           
