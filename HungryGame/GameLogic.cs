@@ -335,6 +335,10 @@ public class GameLogic
                 cells[newLocation] = newCell;
                 playerLocations[token] = newLocation;
                 emptyCells.Remove(newLocation);
+                if (origCell.IsPillAvailable)
+                {
+                    remainingPills--;
+                }
                 activePlayersCount++;
             }
         }
