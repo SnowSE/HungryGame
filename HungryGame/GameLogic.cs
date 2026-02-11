@@ -41,6 +41,7 @@ public class GameLogic
 
     public int MaxRows { get; private set; } = 0;
     public int MaxCols { get; private set; } = 0;
+    public NewGameInfo? LastGameInfo { get; private set; }
     public event EventHandler? GameStateChanged;
 
     public GameLogic(IConfiguration config, ILogger<GameLogic> log, IRandomService random)
@@ -168,6 +169,7 @@ public class GameLogic
 
         MaxRows = gameInfo.NumRows;
         MaxCols = gameInfo.NumColumns;
+        LastGameInfo = gameInfo;
 
         if (gameInfo.IsTimed && gameInfo.TimeLimitInMinutes.HasValue)
         {

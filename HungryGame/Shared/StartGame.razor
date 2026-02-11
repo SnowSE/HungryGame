@@ -59,8 +59,19 @@
 
     protected override void OnInitialized()
     {
-        NewGame.NumRows = config.GetValue<int>("BOARD_HEIGHT", 20);
-        NewGame.NumColumns = config.GetValue<int>("BOARD_WIDTH", 30);
+        if (gameInfo.LastGameInfo is { } last)
+        {
+            NewGame.NumRows = last.NumRows;
+            NewGame.NumColumns = last.NumColumns;
+            NewGame.CellIcon = last.CellIcon;
+            NewGame.IsTimed = last.IsTimed;
+            NewGame.TimeLimitInMinutes = last.TimeLimitInMinutes;
+        }
+        else
+        {
+            NewGame.NumRows = config.GetValue<int>("BOARD_HEIGHT", 20);
+            NewGame.NumColumns = config.GetValue<int>("BOARD_WIDTH", 30);
+        }
     }
 
     private async Task HandleValidSubmit()
