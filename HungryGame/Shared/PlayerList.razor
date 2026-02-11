@@ -42,6 +42,38 @@
     .leaderboard-collapsed {
         display: none;
     }
+
+    .boot-btn {
+        background: #c0392b;
+        border: none;
+        color: white;
+        font-size: 0.65rem;
+        padding: 1px 5px;
+        border-radius: 3px;
+        cursor: pointer;
+        margin-left: 4px;
+        line-height: 1;
+    }
+
+    .boot-btn:hover {
+        background: #e74c3c;
+    }
+
+    .clear-all-btn {
+        background: #c0392b;
+        border: 1px solid #922;
+        color: white;
+        font-size: 0.75rem;
+        padding: 3px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 100%;
+        margin-top: 6px;
+    }
+
+    .clear-all-btn:hover {
+        background: #e74c3c;
+    }
 </style>
 
 <div class="leaderboard">
@@ -104,6 +136,10 @@
                             <td>
                                 <span class="player-id-badge" style="@GetPlayerBadgeStyle(p.Id)">@p.Id</span>
                                 &nbsp;@p.Name
+                                @if (SharedState?.IsAdmin == true)
+                                {
+                                    <button class="boot-btn" @onclick="() => BootPlayer(p.Id)" title="Boot player">X</button>
+                                }
                             </td>
                             @if (gameInfo.IsGameStarted)
                             {
@@ -114,12 +150,20 @@
                 </tbody>
             </table>
         </div>
+        @if (SharedState?.IsAdmin == true)
+        {
+            <button class="clear-all-btn" @onclick="ClearAllPlayers">Clear All Players</button>
+        }
     }
 </div>
 
 @code {
     public enum ViewMode { Full, Top5, Collapsed }
     private ViewMode viewMode = ViewMode.Full;
+    private string? adminToken;
+
+    [CascadingParameter]
+    public SharedStateClass SharedState { get; set; }
 
     private void SetViewMode(ViewMode mode)
     {
@@ -130,6 +174,28 @@
     protected override void OnInitialized()
     {
         gameInfo.GameStateChanged += (_, _) => InvokeAsync(() => StateHasChanged());
+    }
+
+    private void EnsureAdminToken()
+    {
+        if (adminToken == null && SharedState?.IsAdmin == true)
+        {
+            adminToken = gameInfo.AdminLogin(SharedState.AdminPassword);
+        }
+    }
+
+    private void BootPlayer(int playerId)
+    {
+        EnsureAdminToken();
+        if (adminToken != null)
+            gameInfo.BootPlayer(adminToken, playerId);
+    }
+
+    private void ClearAllPlayers()
+    {
+        EnsureAdminToken();
+        if (adminToken != null)
+            gameInfo.ClearAllPlayers(adminToken);
     }
 
     private static readonly string[] PlayerColors = {

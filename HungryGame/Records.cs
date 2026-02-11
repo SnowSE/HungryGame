@@ -24,6 +24,8 @@ public class SharedStateClass
 {
     public string CellIcon { get; set; } = "🌯";
     public DateTime? GameEndsOn { get; set; }
+    public bool IsAdmin { get; set; }
+    public string? AdminPassword { get; set; }
 }
 
 public record MoveResult(Location NewLocation, bool AteAPill);

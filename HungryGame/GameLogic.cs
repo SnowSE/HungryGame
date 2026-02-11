@@ -29,6 +29,7 @@ public class GameLogic
     private readonly Dictionary<Location, int> specialPointValues = new();
     private readonly HashSet<Player> playersThatMovedThisGame = new();
     private readonly HashSet<Location> emptyCells = new();
+    private readonly HashSet<string> adminTokens = new();
 
     private int remainingPills = 0;
     private int activePlayersCount = 0;
@@ -47,6 +48,93 @@ public class GameLogic
         this.config = config ?? throw new ArgumentNullException(nameof(config));
         this.log = log;
         this.random = random;
+    }
+
+    public string? AdminLogin(string password)
+    {
+        if (password != config["SECRET_CODE"])
+            return null;
+
+        var token = Guid.NewGuid().ToString();
+        lock (lockForPlayersCellsPillValuesAndSpecialPontValues)
+        {
+            adminTokens.Add(token);
+        }
+        log.LogInformation("Admin session created");
+        return token;
+    }
+
+    public void AdminLogout(string adminToken)
+    {
+        lock (lockForPlayersCellsPillValuesAndSpecialPontValues)
+        {
+            adminTokens.Remove(adminToken);
+        }
+    }
+
+    public bool IsValidAdminToken(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token)) return false;
+        lock (lockForPlayersCellsPillValuesAndSpecialPontValues)
+        {
+            return adminTokens.Contains(token);
+        }
+    }
+
+    public void BootPlayer(string adminToken, int playerId)
+    {
+        if (!IsValidAdminToken(adminToken)) return;
+
+        lock (lockForPlayersCellsPillValuesAndSpecialPontValues)
+        {
+            var player = players.FirstOrDefault(p => p.Id == playerId);
+            if (player == null) return;
+
+            // Remove from board if on it
+            if (player.Token != null && playerLocations.TryGetValue(player.Token, out var location))
+            {
+                playerLocations.Remove(player.Token);
+                var cell = cells[location];
+                cells[location] = cell with { OccupiedBy = null, IsPillAvailable = true };
+                emptyCells.Add(location);
+                remainingPills++;
+                activePlayersCount--;
+            }
+
+            players.Remove(player);
+            playersThatMovedThisGame.Remove(player);
+            log.LogInformation("Admin booted player {playerName} (ID: {playerId})", player.Name, playerId);
+        }
+
+        raiseStateChange();
+    }
+
+    public void ClearAllPlayers(string adminToken)
+    {
+        if (!IsValidAdminToken(adminToken)) return;
+
+        lock (lockForPlayersCellsPillValuesAndSpecialPontValues)
+        {
+            // Clear players off the board
+            foreach (var player in players)
+            {
+                if (player.Token != null && playerLocations.TryGetValue(player.Token, out var location))
+                {
+                    var cell = cells[location];
+                    cells[location] = cell with { OccupiedBy = null, IsPillAvailable = true };
+                    emptyCells.Add(location);
+                    remainingPills++;
+                }
+            }
+
+            players.Clear();
+            playerLocations.Clear();
+            playersThatMovedThisGame.Clear();
+            activePlayersCount = 0;
+            log.LogInformation("Admin cleared all players");
+        }
+
+        raiseStateChange();
     }
 
     public DateTime lastStateChange;
@@ -71,7 +159,9 @@ public class GameLogic
 
     public void StartGame(NewGameInfo gameInfo)
     {
-        if (gameInfo.SecretCode != config["SECRET_CODE"] || Interlocked.Read(ref gameStateValue) != 0)
+        bool authorized = gameInfo.SecretCode == config["SECRET_CODE"]
+                       || IsValidAdminToken(gameInfo.AdminToken);
+        if (!authorized || Interlocked.Read(ref gameStateValue) != 0)
         {
             return;
         }
@@ -184,9 +274,11 @@ public class GameLogic
         raiseStateChange();
     }
 
-    public void ResetGame(string secretCode)
+    public void ResetGame(string secretCode, string? adminToken = null)
     {
-        if (secretCode != config["SECRET_CODE"] || Interlocked.Read(ref gameStateValue) == 0)
+        bool authorized = secretCode == config["SECRET_CODE"]
+                       || IsValidAdminToken(adminToken);
+        if (!authorized || Interlocked.Read(ref gameStateValue) == 0)
         {
             return;
         }

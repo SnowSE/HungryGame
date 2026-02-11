@@ -16,10 +16,13 @@
             Cell Icon
             <InputText DisplayName="Cell Icon" @bind-Value="NewGame.CellIcon" size="2" maxlength="2" class="form-control" />
         </label>
-        <label>
-            Password
-            <InputText type="password" DisplayName="Password" @bind-Value="NewGame.SecretCode" size="8" class="form-control" />
-        </label>
+        @if (!SharedState.IsAdmin)
+        {
+            <label>
+                Password
+                <InputText type="password" DisplayName="Password" @bind-Value="NewGame.SecretCode" size="8" class="form-control" />
+            </label>
+        }
     </div>
     <div class="form-group mt-3 mb-3" style="align-items: center;">
         <div class="form-check">
@@ -62,7 +65,11 @@
 
     private async Task HandleValidSubmit()
     {
-        if (NewGame.SecretCode != config["SECRET_CODE"])
+        if (SharedState.IsAdmin)
+        {
+            NewGame.SecretCode = SharedState.AdminPassword;
+        }
+        else if (NewGame.SecretCode != config["SECRET_CODE"])
         {
             startGameError = "Invalid password.  Unable to start game.";
             return;

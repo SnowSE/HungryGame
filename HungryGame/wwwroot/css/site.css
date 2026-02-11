@@ -713,17 +713,14 @@ a:hover, .btn-link:hover {
 /* ---- Nav Links Panel ---- */
 .nav-links {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 8px 12px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-sm);
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
     font-size: 0.85rem;
 }
 
 .nav-links a {
-    padding: 4px 0;
+    padding: 0;
 }
 
 /* ---- Page Header ---- */

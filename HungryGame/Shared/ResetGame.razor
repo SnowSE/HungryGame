@@ -1,7 +1,11 @@
 @inject GameLogic gameInfo
 
 <div class="reset-panel">
-    @if (isVisible)
+    @if (SharedState.IsAdmin)
+    {
+        <button class="btn btn-secondary w-100" @onclick="resetAsAdmin">Reset Game</button>
+    }
+    else if (isVisible)
     {
         <a class="reset-toggle" @onclick="toggleVisibility">Reset Game &#x25B2;</a>
         <form class="mt-3">
@@ -18,11 +22,21 @@
 @code {
     private string? secretCode;
     private ElementReference codeRef;
+
+    [CascadingParameter]
+    public SharedStateClass SharedState { get; set; }
+
     private void reset()
     {
         if (secretCode != null)
             gameInfo.ResetGame(secretCode);
     }
+
+    private void resetAsAdmin()
+    {
+        gameInfo.ResetGame(SharedState.AdminPassword);
+    }
+
     private bool isVisible = false;
     private void toggleVisibility()
     {

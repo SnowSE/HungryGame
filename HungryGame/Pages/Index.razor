@@ -1,5 +1,6 @@
 @page "/"
 @inject GameLogic gameInfo
+@inject IConfiguration config
 
 <PageTitle>Hungry Game</PageTitle>
 
@@ -9,6 +10,17 @@
         <a href="help">Help / API Docs</a>
         <a href="swagger">Swagger</a>
         <a href="player">Web Player</a>
+        @if (SharedState.IsAdmin)
+        {
+            <a href="javascript:void(0)" @onclick="AdminLogout">Logout</a>
+        }
+        else
+        {
+            <form style="display: inline-flex; align-items: center; gap: 4px;" @onsubmit="AdminLogin">
+                <input type="password" @bind="adminPasswordInput" placeholder="admin pw" style="width: 90px; padding: 2px 6px; font-size: 0.8rem; background: #222; border: 1px solid #555; color: #eee; border-radius: 4px;" />
+                <button type="submit" style="padding: 2px 8px; font-size: 0.8rem; background: #333; border: 1px solid #555; color: #eee; border-radius: 4px; cursor: pointer;">Login</button>
+            </form>
+        }
     </div>
 </div>
 
@@ -59,9 +71,26 @@
 @code
 {
     public SharedStateClass SharedState { get; set; } = new();
+    private string? adminPasswordInput;
 
     protected override void OnInitialized()
     {
         gameInfo.GameStateChanged += (_, _) => InvokeAsync(() => StateHasChanged());
+    }
+
+    private void AdminLogin()
+    {
+        if (adminPasswordInput == config["SECRET_CODE"])
+        {
+            SharedState.IsAdmin = true;
+            SharedState.AdminPassword = adminPasswordInput;
+        }
+        adminPasswordInput = null;
+    }
+
+    private void AdminLogout()
+    {
+        SharedState.IsAdmin = false;
+        SharedState.AdminPassword = null;
     }
 }

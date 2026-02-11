@@ -120,19 +120,51 @@ app.MapGet("players", ([FromServices] GameLogic gameLogic, IMemoryCache memoryCa
     });
 
 });
-app.MapGet("start", (int numRows, int numCols, string password, int? timeLimit, GameLogic gameLogic) =>
+app.MapGet("start", (int numRows, int numCols, string? password, string? adminToken, int? timeLimit, GameLogic gameLogic) =>
 {
     var gameStart = new NewGameInfo
     {
         NumColumns = numCols,
         NumRows = numRows,
-        SecretCode = password,
+        SecretCode = password ?? "",
+        AdminToken = adminToken,
         IsTimed = timeLimit.HasValue,
         TimeLimitInMinutes = timeLimit,
     };
     gameLogic.StartGame(gameStart);
 }).RequireRateLimiting("fixed");
-app.MapGet("reset", (string password, GameLogic gameLogic) => gameLogic.ResetGame(password)).RequireRateLimiting("fixed");
+app.MapGet("reset", (string? password, string? adminToken, GameLogic gameLogic) => gameLogic.ResetGame(password ?? "", adminToken)).RequireRateLimiting("fixed");
+
+// Admin endpoints
+app.MapPost("admin/login", (string password, GameLogic gameLogic) =>
+{
+    var token = gameLogic.AdminLogin(password);
+    if (token == null)
+        return Results.Unauthorized();
+    return Results.Ok(token);
+}).RequireRateLimiting("fixed");
+
+app.MapPost("admin/logout", (string adminToken, GameLogic gameLogic) =>
+{
+    gameLogic.AdminLogout(adminToken);
+    return Results.Ok();
+}).RequireRateLimiting("fixed");
+
+app.MapPost("admin/boot", (string adminToken, int playerId, GameLogic gameLogic) =>
+{
+    if (!gameLogic.IsValidAdminToken(adminToken))
+        return Results.Unauthorized();
+    gameLogic.BootPlayer(adminToken, playerId);
+    return Results.Ok();
+}).RequireRateLimiting("fixed");
+
+app.MapPost("admin/clear-players", (string adminToken, GameLogic gameLogic) =>
+{
+    if (!gameLogic.IsValidAdminToken(adminToken))
+        return Results.Unauthorized();
+    gameLogic.ClearAllPlayers(adminToken);
+    return Results.Ok();
+}).RequireRateLimiting("fixed");
 app.MapGet("board", ([FromServices] GameLogic gameLogic, IMemoryCache memoryCache) =>
 {
     return memoryCache.GetOrCreate("board",

@@ -7,4 +7,5 @@ public class NewGameInfo
     public string CellIcon { get; set; } = "🌯";
     public bool IsTimed { get; set; }
     public int? TimeLimitInMinutes { get; set; }
+    public string? AdminToken { get; set; }
 }
