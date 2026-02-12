@@ -12,12 +12,26 @@ function randomDirection {
 }
 
 $client = [System.Net.Http.HttpClient]::new()
+$delay = 0
 
 function call($path) {
-    $clientResult = $client.GetStringAsync($path).
-        GetAwaiter().
-        GetResult()
-    return $clientResult
+    if ($script:delay -gt 0) {
+        Start-Sleep -Milliseconds $script:delay
+    }
+    while ($true) {
+        $response = $client.GetAsync($path).GetAwaiter().GetResult()
+        if ([int]$response.StatusCode -eq 429) {
+            $script:delay = $script:delay + 500
+            write-host "Rate limited. Slowing down to $($script:delay)ms delay."
+            Start-Sleep -Milliseconds $script:delay
+            continue
+        }
+        $response.EnsureSuccessStatusCode() | Out-Null
+        if ($script:delay -gt 0) {
+            $script:delay = [math]::Max(0, $script:delay - 50)
+        }
+        return $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+    }
 }
 
 function get-gameState {

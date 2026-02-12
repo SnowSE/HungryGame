@@ -1,74 +1,19 @@
-﻿@using System.Text
-@inject HttpClient httpClient
 @inject ViewerInfo gameInfo
+@inject IJSRuntime JS
 
-<style>
-    .gridboard {
-        display: grid;
-        grid-template-columns: @gridTemplateColumns;
-        grid-template-rows: @gridTemplateRows;
-        gap: 0px 0px;
-        grid-template-areas: @gridTemplateAreas()
-    }
+<p id="boardInfo"></p>
 
-    @cellClasses()
-</style>
-
-<p>There are @gameInfo.MaxColumns columns!</p>
-
-<div class="gridboard">
-    @for (int row = 0; row < gameInfo.MaxRows; row++)
-    {
-        @for (int col = 0; col < gameInfo.MaxColumns; col++)
-        {
-            var cell = gameInfo.GetCell(row, col) ?? throw new Exception("Cell not found");
-            var classname = $"r{row}c{col} border";
-
-            <div class=@classname>
-                @(cell.OccupiedBy?.Id.ToString() ?? (cell.IsPillAvailable ? ("🌯" ?? "?") : " "))
-            </div>
-        }
-    }
+<div style="width:100%;height:80vh;">
+    <canvas id="boardCanvas" style="width:100%;height:100%;display:block;"></canvas>
 </div>
-
-@code {
-
 
 @code
 {
-    protected override void OnInitialized()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        gameInfo.UpdateTick += (_, _) => InvokeAsync(() => StateHasChanged());
-    }
-}
-    public string gridTemplateRows => String.Join(" ", Enumerable.Repeat("1fr", gameInfo.MaxRows));
-    public string gridTemplateColumns => String.Join(" ", Enumerable.Repeat("1fr", gameInfo.MaxColumns));
-
-    public string gridTemplateAreas()
-    {
-        var sb = new StringBuilder();
-        for(int row=0;row<gameInfo.MaxRows;row++)
+        if (firstRender)
         {
-            sb.Append("\"");
-            for(int col=0;col<gameInfo.MaxColumns;col++)
-            {
-                sb.Append($"r{row}c{col} ");
-            }
-            sb.AppendLine("\"");
+            await JS.InvokeVoidAsync("initBoard", "boardCanvas", gameInfo.Server);
         }
-        return sb.ToString();
-    }
-
-    public string cellClasses()
-    {
-        var sb = new StringBuilder();
-        for(int row=0;row<gameInfo.MaxRows;row++)
-        {
-            for(int col=0;col<gameInfo.MaxColumns;col++)
-            {
-                sb.AppendLine($".r{row}c{col} {{grid-area: r{row}c{col};}} ");
-            }
-        }
-        return sb.ToString();
     }
 }

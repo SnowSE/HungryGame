@@ -3,12 +3,10 @@
 @inject ILogger<Index> logger
 
 <PageTitle>HungryGame REST Viewer</PageTitle>
-<p>It's working? With @gameInfo.MaxColumns columns</p>
 <Board />
 
 @code
 {
-
     protected override void OnInitialized()
     {
         gameInfo.UpdateTick += (_, _) => InvokeAsync(() => StateHasChanged());

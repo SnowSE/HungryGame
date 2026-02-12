@@ -1,17 +1,7 @@
-@using System.Text
 @inject GameLogic gameInfo
 @inject IJSRuntime JS
 
 <style>
-    .gridboard {
-        display: grid;
-        grid-template-columns: repeat(@gameInfo.MaxCols, 1fr);
-        grid-template-rows: repeat(@gameInfo.MaxRows, 1fr);
-        gap: 0px 0px;
-        width: 100%;
-        aspect-ratio: @gameInfo.MaxCols / @gameInfo.MaxRows;
-    }
-
     .board-container {
         position: relative;
         background: #1a1a1a;
@@ -22,9 +12,36 @@
         align-items: center;
     }
 
-    .board-wrapper {
+    .board-canvas-wrap {
         width: 100%;
-        max-width: 100%;
+        aspect-ratio: @gameInfo.MaxCols / @(Math.Max(gameInfo.MaxRows, 1));
+        position: relative;
+        border-radius: var(--radius-md);
+        padding: 8px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        box-shadow: var(--shadow-card);
+        overflow: hidden;
+    }
+
+    .board-canvas-wrap::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, var(--neon-green), var(--neon-cyan), var(--neon-pink));
+    }
+
+    .board-canvas-wrap.battle-mode {
+        border-color: rgba(255, 68, 68, 0.3);
+        box-shadow: 0 0 40px rgba(255, 68, 68, 0.1), var(--shadow-card);
+    }
+
+    .board-canvas-wrap.battle-mode::before {
+        background: linear-gradient(90deg, var(--battle-red), var(--neon-orange), var(--battle-red));
+        animation: battle-glow 1.5s ease-in-out infinite;
     }
 
     .fullscreen-btn {
@@ -71,20 +88,12 @@
         overflow: visible;
     }
 
-    :fullscreen .gridboard {
-        --cols: @gameInfo.MaxCols;
-        --rows: @gameInfo.MaxRows;
-        /* Calculate sizes based on viewport min to ensure it always fits */
-        width: calc(100vmin * (var(--cols) / var(--vmax-dim)));
-        height: calc(100vmin * (var(--rows) / var(--vmax-dim)));
-        --vmax-dim: @(Math.Max(gameInfo.MaxCols, gameInfo.MaxRows));
-        
-        /* Fallback / secondary approach if the above is still problematic */
-        width: min(98vw, calc(98vh * var(--cols) / var(--rows)));
-        height: min(98vh, calc(98vw * var(--rows) / var(--cols)));
-        
+    :fullscreen .board-canvas-wrap {
+        width: min(98vw, calc(98vh * @gameInfo.MaxCols / @(Math.Max(gameInfo.MaxRows, 1))));
+        height: min(98vh, calc(98vw * @gameInfo.MaxRows / @(Math.Max(gameInfo.MaxCols, 1))));
         max-width: none;
         max-height: none;
+        aspect-ratio: auto;
     }
 
     .fullscreen-leaderboard {
@@ -105,7 +114,6 @@
         overflow: visible;
     }
 
-    /* Override standard leaderboard styles for the floating overlay */
     :fullscreen .fullscreen-leaderboard .leaderboard {
         background: rgba(10, 10, 26, 0.6) !important;
         backdrop-filter: blur(12px);
@@ -127,16 +135,6 @@
     :fullscreen .fullscreen-leaderboard td {
         background: transparent !important;
     }
-
-    :fullscreen .board-wrapper {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 0;
-        margin: 0;
-    }
 </style>
 
 <div id="game-board-root" class="board-container">
@@ -150,43 +148,73 @@
         <PlayerList />
     </div>
 
-    <div class="board-wrapper @(gameInfo.CurrentGameState == GameState.Battle ? "battle-mode" : "")">
-        <div class="gridboard">
-            @for (int row = 0; row < gameInfo.MaxRows; row++)
-            {
-                @for (int col = 0; col < gameInfo.MaxCols; col++)
-                {
-                    var cell = gameInfo.GetCell(row, col) ?? throw new CellNotFoundException();
-                    var player = cell.OccupiedBy;
-                    var hasPill = cell.IsPillAvailable;
-
-                    if (player != null)
-                    {
-                        var colorClass = $"player-color-{(player.Id - 1) % 10}";
-                        <div class="cell cell-player @colorClass">
-                            <span class="player-marker">@player.Id</span>
-                        </div>
-                    }
-                    else if (hasPill)
-                    {
-                        <div class="cell cell-pill">
-                            <span class="pill-icon">@(SharedState?.CellIcon ?? "?")</span>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="cell cell-empty"></div>
-                    }
-                }
-            }
-        </div>
+    <div class="board-canvas-wrap @(gameInfo.CurrentGameState == GameState.Battle ? "battle-mode" : "")">
+        <canvas id="serverBoardCanvas" style="width:100%;height:100%;display:block;"></canvas>
     </div>
 </div>
 
 @code {
 
     [CascadingParameter]
-    public SharedStateClass SharedState{  get;  set; }
+    public SharedStateClass SharedState { get; set; }
+
+    private bool jsReady;
+
+    protected override void OnInitialized()
+    {
+        gameInfo.GameStateChanged += OnGameStateChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("boardRenderer.init", "serverBoardCanvas");
+            jsReady = true;
+            await PushBoardToCanvas();
+        }
+    }
+
+    private async void OnGameStateChanged(object? sender, EventArgs e)
+    {
+        await InvokeAsync(async () =>
+        {
+            if (jsReady)
+            {
+                await PushBoardToCanvas();
+            }
+            StateHasChanged();
+        });
+    }
+
+    private async Task PushBoardToCanvas()
+    {
+        var boardCells = gameInfo.GetBoardState().ToList();
+        if (boardCells.Count == 0) return;
+
+        int rows = gameInfo.MaxRows;
+        int cols = gameInfo.MaxCols;
+        var gridData = new byte[rows * cols];
+        var playerPositions = new List<int[]>();
+
+        foreach (var cell in boardCells)
+        {
+            int idx = cell.Location.Row * cols + cell.Location.Column;
+            if (idx < 0 || idx >= gridData.Length) continue;
+
+            if (cell.OccupiedBy != null)
+            {
+                gridData[idx] = (byte)(2 + ((cell.OccupiedBy.Id - 1) % 254));
+                playerPositions.Add(new[] { cell.Location.Row, cell.Location.Column, cell.OccupiedBy.Id });
+            }
+            else if (cell.IsPillAvailable)
+            {
+                gridData[idx] = 1;
+            }
+        }
+
+        await JS.InvokeVoidAsync("boardRenderer.render", rows, cols, gridData, playerPositions);
+    }
 
     private async Task ToggleFullScreen()
     {
@@ -201,12 +229,4 @@
             }
         ");
     }
-
-    protected override void OnInitialized()
-    {
-        gameInfo.GameStateChanged += (_, _) => InvokeAsync(() => StateHasChanged());
-    }
-
-    public string gridTemplateRows => String.Join(" ", Enumerable.Repeat("1fr", gameInfo.MaxRows));
-    public string gridTemplateColumns => String.Join(" ", Enumerable.Repeat("1fr", gameInfo.MaxCols));
 }
