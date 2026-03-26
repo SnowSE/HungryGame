@@ -95,7 +95,11 @@ app.UseRouting();
 app.UseRateLimiter();
 app.MapBlazorHub();
 app.MapOpenApi();
-app.MapScalarApiReference();
+app.MapScalarApiReference(options =>
+{
+    options.Title = "Hungry Game API";
+    options.WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
+});
 
 app.MapFallbackToPage("/_Host");
 
