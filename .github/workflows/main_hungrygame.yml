@@ -24,7 +24,7 @@ jobs:
           dotnet-version: '10.x'
 
       - name: Run Tests
-        run: dotnet tet --configuration Release
+        run: dotnet test --configuration Release
 
       - name: Build / Publish
         run: dotnet publish HungryGame -c Release -o ${{env.DOTNET_ROOT}}/myapp
