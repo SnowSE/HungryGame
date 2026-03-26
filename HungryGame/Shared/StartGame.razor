@@ -3,54 +3,63 @@
 @inject IJSRuntime JS
 
 <EditForm Model="@NewGame" OnValidSubmit="@HandleValidSubmit" class="start-game-form">
-    <h3 style="margin-bottom: 20px; color: var(--neon-green);">New Game</h3>
-    <div class="form-group">
-        <label>
-            Rows
-            <InputNumber DisplayName="Rows" @bind-Value="NewGame.NumRows" style="width: 80px" class="form-control" />
-        </label>
-        <label>
-            Columns
-            <InputNumber DisplayName="Columns" @bind-Value="NewGame.NumColumns" style="width: 80px" class="form-control" />
-        </label>
-        <div class="form-check" style="align-self: flex-end; margin-bottom: 4px;">
-            <InputCheckbox id="useCustomEmoji" @bind-Value="NewGame.UseCustomEmoji" class="form-check-input" />
-            <label class="form-label" for="useCustomEmoji" style="text-transform: none; font-size: 0.9rem;">Use custom emoji</label>
+    <div class="start-game-header">
+        <h3>New Game</h3>
+        <p class="start-game-subtitle">Set the board size and launch when ready.</p>
+    </div>
+
+    <div class="start-game-section">
+        <div class="start-game-grid">
+            <label class="start-game-field">
+                Rows
+                <InputNumber DisplayName="Rows" @bind-Value="NewGame.NumRows" class="form-control start-game-input" />
+            </label>
+            <label class="start-game-field">
+                Columns
+                <InputNumber DisplayName="Columns" @bind-Value="NewGame.NumColumns" class="form-control start-game-input" />
+            </label>
+            <div class="start-game-toggle">
+                <InputCheckbox id="useCustomEmoji" @bind-Value="NewGame.UseCustomEmoji" class="form-check-input" />
+                <label class="form-label" for="useCustomEmoji">Use custom emoji</label>
+            </div>
         </div>
+
         @if (NewGame.UseCustomEmoji)
         {
-            <label>
+            <label class="start-game-field start-game-field--emoji">
                 Cell Icon
-                <InputText DisplayName="Cell Icon" @bind-Value="NewGame.CellIcon" size="2" maxlength="2" class="form-control" />
+                <InputText DisplayName="Cell Icon" @bind-Value="NewGame.CellIcon" maxlength="2" class="form-control start-game-input start-game-emoji" />
             </label>
         }
     </div>
-    <div class="form-group mt-3 mb-3" style="align-items: center;">
-        <div class="form-check">
+
+    <div class="start-game-section start-game-section--inline">
+        <div class="start-game-toggle">
             <InputCheckbox id="isTimed" DisplayName="Is Timed" @bind-Value="NewGame.IsTimed" class="form-check-input" />
-            <label class="form-label" for="isTimed" style="text-transform: none; font-size: 0.9rem;">Timed Game</label>
+            <label class="form-label" for="isTimed">Timed Game</label>
         </div>
         @if (NewGame.IsTimed)
         {
-            <label>
+            <label class="start-game-field">
                 Minutes
-                <input type="number" class="form-control" min=1 max=10 size="3" style="width: 80px" @bind="NewGame.TimeLimitInMinutes" />
+                <input type="number" class="form-control start-game-input" min="1" max="10" @bind="NewGame.TimeLimitInMinutes" />
             </label>
         }
     </div>
-    <div class="form-group">
+
+    <div class="start-game-section start-game-actions">
         @if (!SharedState.IsAdmin)
         {
-            <label>
+            <label class="start-game-field">
                 Password
-                <InputText type="password" DisplayName="Password" @bind-Value="NewGame.SecretCode" size="8" class="form-control" />
+                <InputText type="password" DisplayName="Password" @bind-Value="NewGame.SecretCode" class="form-control start-game-input" />
             </label>
         }
-        <button class="btn btn-primary" type="submit">Launch Game</button>
+        <button class="btn btn-primary start-game-submit" type="submit">Launch Game</button>
 
         @if (startGameError != null)
         {
-            <div class="error-message mt-3">
+            <div class="error-message start-game-error">
                 <strong>Access Denied</strong> &mdash; Invalid password
             </div>
         }
