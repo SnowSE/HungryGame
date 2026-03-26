@@ -32,7 +32,7 @@ window.boardRenderer = {
         }
     },
 
-    render: function (rows, cols, gridData, players) {
+    render: function (rows, cols, gridData, players, cellIcon, useCustomEmoji) {
         var canvas = this.canvas;
         var ctx = this.ctx;
         if (!canvas || !ctx || rows === 0 || cols === 0) return;
@@ -92,8 +92,20 @@ window.boardRenderer = {
         var cellW = w / cols;
         var cellH = h / rows;
 
-        // Draw pill dots when cells are large enough
-        if (cellW >= 4 && cellH >= 4) {
+        // Draw pill indicators
+        if (useCustomEmoji && cellIcon) {
+            var fontSize = Math.max(Math.floor(Math.min(cellW, cellH) * 0.85), 4);
+            ctx.font = fontSize + 'px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            for (var i = 0; i < gridData.length; i++) {
+                if (gridData[i] === 1) {
+                    var row = Math.floor(i / cols);
+                    var col = i % cols;
+                    ctx.fillText(cellIcon, col * cellW + cellW / 2, row * cellH + cellH / 2);
+                }
+            }
+        } else if (cellW >= 4 && cellH >= 4) {
             ctx.fillStyle = 'rgba(0, 255, 136, 0.6)';
             for (var i = 0; i < gridData.length; i++) {
                 if (gridData[i] === 1) {

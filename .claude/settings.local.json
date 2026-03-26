@@ -6,7 +6,8 @@
       "Bash(dotnet add:*)",
       "Bash(findstr:*)",
       "Bash(dotnet tool install:*)",
-      "Bash(ilspycmd:*)"
+      "Bash(ilspycmd:*)",
+      "Bash(dotnet remove:*)"
     ]
   }
 }

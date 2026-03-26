@@ -213,7 +213,7 @@
             }
         }
 
-        await JS.InvokeVoidAsync("boardRenderer.render", rows, cols, gridData, playerPositions);
+        await JS.InvokeVoidAsync("boardRenderer.render", rows, cols, gridData, playerPositions, SharedState.CellIcon, SharedState.UseCustomEmoji);
     }
 
     private async Task ToggleFullScreen()

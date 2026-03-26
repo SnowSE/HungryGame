@@ -23,6 +23,7 @@ public enum Direction { Up, Down, Left, Right, Undefined };
 public class SharedStateClass
 {
     public string CellIcon { get; set; } = "🌯";
+    public bool UseCustomEmoji { get; set; } = false;
     public DateTime? GameEndsOn { get; set; }
     public bool IsAdmin { get; set; }
     public string? AdminPassword { get; set; }

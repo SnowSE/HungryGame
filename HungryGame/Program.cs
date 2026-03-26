@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Caching.Memory;
 using Prometheus;
+using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Exceptions;
 using Serilog.Sinks.Loki;
@@ -37,10 +38,7 @@ builder.Services.AddSingleton<GameLogic>();
 builder.Services.AddSingleton<IRandomService, SystemRandomService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddCors();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new() { Title = builder.Environment.ApplicationName, Version = "v1" });
-});
+builder.Services.AddOpenApi();
 
 builder.Host.UseSerilog((context, loggerConfig) => {
     loggerConfig.WriteTo.Console()
@@ -96,8 +94,8 @@ app.Use(async (context, next) =>
 app.UseRouting();
 app.UseRateLimiter();
 app.MapBlazorHub();
-app.UseSwagger();
-app.UseSwaggerUI(c => c.SwaggerEndpoint("v1/swagger.json", $"{builder.Environment.ApplicationName} v1"));
+app.MapOpenApi();
+app.MapScalarApiReference();
 
 app.MapFallbackToPage("/_Host");
 

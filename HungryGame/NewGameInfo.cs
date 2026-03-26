@@ -5,6 +5,7 @@ public class NewGameInfo
     public int NumColumns { get; set; }
     public string SecretCode { get; set; } = string.Empty;
     public string CellIcon { get; set; } = "🌯";
+    public bool UseCustomEmoji { get; set; } = false;
     public bool IsTimed { get; set; }
     public int? TimeLimitInMinutes { get; set; }
     public string? AdminToken { get; set; }
