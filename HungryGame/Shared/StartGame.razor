@@ -56,10 +56,10 @@
 @code
 {
     private NewGameInfo NewGame = new();
-    private string startGameError;
+    private string? startGameError;
 
     [CascadingParameter]
-    public SharedStateClass SharedState { get; set; }
+    public SharedStateClass SharedState { get; set; } = default!;
 
     protected override void OnInitialized()
     {
@@ -82,7 +82,7 @@
     {
         if (SharedState.IsAdmin)
         {
-            NewGame.SecretCode = SharedState.AdminPassword;
+            NewGame.SecretCode = SharedState.AdminPassword ?? string.Empty;
         }
         else if (NewGame.SecretCode != config["SECRET_CODE"])
         {

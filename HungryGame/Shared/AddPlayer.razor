@@ -45,14 +45,14 @@
     private JoinPlayerInfo joinPlayerInfo = new();
     private bool joined = false;
     private bool gameAlreadyStarted = false;
-    private string token = null;
+    private string? token = null;
     private ElementReference myDiv;
 
     private async Task HandleValidSubmit()
     {
         try
         {
-            token = gameInfo.JoinPlayer(joinPlayerInfo?.PlayerName);
+            token = gameInfo.JoinPlayer(joinPlayerInfo.PlayerName!);
             joined = true;
             joinPlayerInfo.PlayerName = null;
             await myDiv.FocusAsync();
@@ -75,12 +75,12 @@
         };
         if (direction != Direction.Undefined)
         {
-            gameInfo.Move(token, direction);
+            gameInfo.Move(token!, direction);
         }
     }
 
-    private void moveUp() => gameInfo.Move(token, Direction.Up);
-    private void moveRight() => gameInfo.Move(token, Direction.Right);
-    private void moveLeft() => gameInfo.Move(token, Direction.Left);
-    private void moveDown() => gameInfo.Move(token, Direction.Down);
+    private void moveUp() => gameInfo.Move(token!, Direction.Up);
+    private void moveRight() => gameInfo.Move(token!, Direction.Right);
+    private void moveLeft() => gameInfo.Move(token!, Direction.Left);
+    private void moveDown() => gameInfo.Move(token!, Direction.Down);
 }

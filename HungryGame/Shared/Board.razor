@@ -155,9 +155,6 @@
 
 @code {
 
-    [CascadingParameter]
-    public SharedStateClass SharedState { get; set; }
-
     private bool jsReady;
 
     protected override void OnInitialized()
@@ -213,7 +210,9 @@
             }
         }
 
-        await JS.InvokeVoidAsync("boardRenderer.render", rows, cols, gridData, playerPositions, SharedState.CellIcon, SharedState.UseCustomEmoji);
+        var cellIcon = gameInfo.LastGameInfo?.CellIcon ?? "";
+        var useCustomEmoji = gameInfo.LastGameInfo?.UseCustomEmoji ?? false;
+        await JS.InvokeVoidAsync("boardRenderer.render", rows, cols, gridData, playerPositions, cellIcon, useCustomEmoji);
     }
 
     private async Task ToggleFullScreen()

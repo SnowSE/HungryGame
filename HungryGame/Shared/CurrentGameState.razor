@@ -28,9 +28,9 @@
 
 @code {
     [CascadingParameter]
-    public SharedStateClass SharedState { get; set; }
-    private System.Timers.Timer timer;
-    private string timeRemaining;
+    public SharedStateClass SharedState { get; set; } = default!;
+    private System.Timers.Timer timer = null!;
+    private string timeRemaining = "";
 
     protected override void OnInitialized()
     {

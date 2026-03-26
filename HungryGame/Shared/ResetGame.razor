@@ -24,7 +24,7 @@
     private ElementReference codeRef;
 
     [CascadingParameter]
-    public SharedStateClass SharedState { get; set; }
+    public SharedStateClass SharedState { get; set; } = default!;
 
     private void reset()
     {
@@ -34,7 +34,7 @@
 
     private void resetAsAdmin()
     {
-        gameInfo.ResetGame(SharedState.AdminPassword);
+        gameInfo.ResetGame(SharedState.AdminPassword!);
     }
 
     private bool isVisible = false;

@@ -73,7 +73,7 @@ public class GameLogic
         }
     }
 
-    public bool IsValidAdminToken(string token)
+    public bool IsValidAdminToken(string? token)
     {
         if (string.IsNullOrWhiteSpace(token)) return false;
         lock (lockForPlayersCellsPillValuesAndSpecialPontValues)
@@ -359,7 +359,7 @@ public class GameLogic
 
         playerToken = playerToken.Replace("\"", "");
 
-        Player player;
+        Player? player;
         Cell cell;
         MoveResult moveResult;
 

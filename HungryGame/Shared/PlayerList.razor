@@ -163,7 +163,7 @@
     private string? adminToken;
 
     [CascadingParameter]
-    public SharedStateClass SharedState { get; set; }
+    public SharedStateClass SharedState { get; set; } = default!;
 
     private void SetViewMode(ViewMode mode)
     {
@@ -180,7 +180,7 @@
     {
         if (adminToken == null && SharedState?.IsAdmin == true)
         {
-            adminToken = gameInfo.AdminLogin(SharedState.AdminPassword);
+            adminToken = gameInfo.AdminLogin(SharedState.AdminPassword!);
         }
     }
 
