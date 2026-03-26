@@ -1,4 +1,6 @@
 @inject GameLogic gameInfo
+@inject IConfiguration config
+@inject IJSRuntime JS
 
 <div class="reset-panel">
     @if (SharedState.IsAdmin)
@@ -26,10 +28,16 @@
     [CascadingParameter]
     public SharedStateClass SharedState { get; set; } = default!;
 
-    private void reset()
+    private async Task reset()
     {
-        if (secretCode != null)
-            gameInfo.ResetGame(secretCode);
+        if (secretCode == null) return;
+        gameInfo.ResetGame(secretCode);
+        if (secretCode == config["SECRET_CODE"])
+        {
+            SharedState.IsAdmin = true;
+            SharedState.AdminPassword = secretCode;
+            await JS.InvokeVoidAsync("localStorage.setItem", "adminPassword", secretCode);
+        }
     }
 
     private void resetAsAdmin()

@@ -1,5 +1,6 @@
 @inject GameLogic gameInfo
 @inject IConfiguration config
+@inject IJSRuntime JS
 
 <EditForm Model="@NewGame" OnValidSubmit="@HandleValidSubmit" class="start-game-form">
     <h3 style="margin-bottom: 20px; color: var(--neon-green);">New Game</h3>
@@ -12,19 +13,15 @@
             Columns
             <InputNumber DisplayName="Columns" @bind-Value="NewGame.NumColumns" style="width: 80px" class="form-control" />
         </label>
-        <label>
-            Cell Icon
-            <InputText DisplayName="Cell Icon" @bind-Value="NewGame.CellIcon" size="2" maxlength="2" class="form-control" />
-        </label>
         <div class="form-check" style="align-self: flex-end; margin-bottom: 4px;">
             <InputCheckbox id="useCustomEmoji" @bind-Value="NewGame.UseCustomEmoji" class="form-check-input" />
             <label class="form-label" for="useCustomEmoji" style="text-transform: none; font-size: 0.9rem;">Use custom emoji</label>
         </div>
-        @if (!SharedState.IsAdmin)
+        @if (NewGame.UseCustomEmoji)
         {
             <label>
-                Password
-                <InputText type="password" DisplayName="Password" @bind-Value="NewGame.SecretCode" size="8" class="form-control" />
+                Cell Icon
+                <InputText DisplayName="Cell Icon" @bind-Value="NewGame.CellIcon" size="2" maxlength="2" class="form-control" />
             </label>
         }
     </div>
@@ -42,6 +39,13 @@
         }
     </div>
     <div class="form-group">
+        @if (!SharedState.IsAdmin)
+        {
+            <label>
+                Password
+                <InputText type="password" DisplayName="Password" @bind-Value="NewGame.SecretCode" size="8" class="form-control" />
+            </label>
+        }
         <button class="btn btn-primary" type="submit">Launch Game</button>
 
         @if (startGameError != null)
@@ -88,6 +92,13 @@
         {
             startGameError = "Invalid password.  Unable to start game.";
             return;
+        }
+        else
+        {
+            // Password was typed and is correct — elevate to admin and remember it
+            SharedState.IsAdmin = true;
+            SharedState.AdminPassword = NewGame.SecretCode;
+            await JS.InvokeVoidAsync("localStorage.setItem", "adminPassword", NewGame.SecretCode);
         }
         startGameError = null;
         SharedState.CellIcon = NewGame.CellIcon;

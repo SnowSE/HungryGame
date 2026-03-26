@@ -1,6 +1,7 @@
 @page "/"
 @inject GameLogic gameInfo
 @inject IConfiguration config
+@inject IJSRuntime JS
 
 <PageTitle>Hungry Game</PageTitle>
 
@@ -78,19 +79,33 @@
         gameInfo.GameStateChanged += (_, _) => InvokeAsync(() => StateHasChanged());
     }
 
-    private void AdminLogin()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        var saved = await JS.InvokeAsync<string?>("localStorage.getItem", "adminPassword");
+        if (saved != null && saved == config["SECRET_CODE"])
+        {
+            SharedState.IsAdmin = true;
+            SharedState.AdminPassword = saved;
+            StateHasChanged();
+        }
+    }
+
+    private async Task AdminLogin()
     {
         if (adminPasswordInput == config["SECRET_CODE"])
         {
             SharedState.IsAdmin = true;
             SharedState.AdminPassword = adminPasswordInput;
+            await JS.InvokeVoidAsync("localStorage.setItem", "adminPassword", adminPasswordInput);
         }
         adminPasswordInput = null;
     }
 
-    private void AdminLogout()
+    private async Task AdminLogout()
     {
         SharedState.IsAdmin = false;
         SharedState.AdminPassword = null;
+        await JS.InvokeVoidAsync("localStorage.removeItem", "adminPassword");
     }
 }
