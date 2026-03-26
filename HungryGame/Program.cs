@@ -1,4 +1,5 @@
 using HungryGame;
+using System.ComponentModel;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -104,11 +105,17 @@ app.MapScalarApiReference(options =>
 app.MapFallbackToPage("/_Host");
 
 //API endpoints
-app.MapGet("join", (string? userName, string? playerName, GameLogic gameLogic) =>
-{
-    var name = userName ?? playerName ?? throw new ArgumentNullException(nameof(userName), "Must define either a userName or playerName in the query string.");
-    return gameLogic.JoinPlayer(name);
-}).RequireRateLimiting("fixed");
+app.MapGet("join", (
+        [Description("Your player name.")] string? userName,
+        [Description("Legacy alias for userName.")] string? playerName,
+        GameLogic gameLogic) =>
+    {
+        var name = userName ?? playerName ?? throw new ArgumentNullException(nameof(userName), "Must define either a userName or playerName in the query string.");
+        return gameLogic.JoinPlayer(name);
+    })
+    .RequireRateLimiting("fixed")
+    .WithSummary("Join the game")
+    .WithDescription("Supply either **userName** or **playerName** — they are equivalent. Returns a token required for all subsequent move requests.");
 app.MapGet("move/left", (string token, GameLogic gameLogic) => gameLogic.Move(token, Direction.Left)).RequireRateLimiting("fixed");
 app.MapGet("move/right", (string token, GameLogic gameLogic) => gameLogic.Move(token, Direction.Right)).RequireRateLimiting("fixed");
 app.MapGet("move/up", (string token, GameLogic gameLogic) => gameLogic.Move(token, Direction.Up)).RequireRateLimiting("fixed");
