@@ -37,3 +37,4 @@ jobs:
           slot-name: 'Production'
           package: ${{env.DOTNET_ROOT}}/myapp
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_5BDDFEE2C1244C62A86595514A4DE054 }}
+          startup-command: 'dotnet HungryGame.dll'
