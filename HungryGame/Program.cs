@@ -40,6 +40,8 @@ builder.Services.AddSingleton<IRandomService, SystemRandomService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddCors();
 builder.Services.AddOpenApi();
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GameExceptionHandler>();
 
 builder.Host.UseSerilog((context, loggerConfig) => {
     loggerConfig.WriteTo.Console()
@@ -55,10 +57,7 @@ var pathBase = builder.Configuration["PATH_BASE"];
 app.UsePathBase(pathBase);
 
 // Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Error");
-}
+app.UseExceptionHandler();
 
 //Prometheus
 app.UseMetricServer();
