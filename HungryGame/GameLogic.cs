@@ -36,6 +36,10 @@ public class GameLogic
     private int number = 0;
     private long gameStateValue = 0;
     private readonly IConfiguration config;
+    private DateTime _gameStartedAt = DateTime.Now;
+    private readonly List<ScoreSnapshot> _scoreHistory = new();
+    private double? _battleStartedAt;
+    private readonly Dictionary<int, double> _playerEliminationTimes = new();
     private readonly ILogger<GameLogic> log;
     private readonly IRandomService random;
 
@@ -179,6 +183,9 @@ public class GameLogic
             gameTimer = new Timer(gameOverCallback, null, TimeLimit.Value, Timeout.InfiniteTimeSpan);
         }
 
+        _scoreHistory.Clear();
+        _battleStartedAt = null;
+        _playerEliminationTimes.Clear();
         initializeGame();
     }
 
@@ -270,7 +277,12 @@ public class GameLogic
             else
                 stateChangeFrequency = TimeSpan.FromMilliseconds(50);
 
+            _gameStartedAt = DateTime.Now;
             Interlocked.Increment(ref gameStateValue);
+            foreach (var p in players)
+            {
+                _scoreHistory.Add(new ScoreSnapshot(p.Id, p.Name, 0, 0.0, GameState.Eating));
+            }
         }
 
         raiseStateChange();
@@ -300,6 +312,9 @@ public class GameLogic
             {
                 p.Score = 0;
             }
+            _scoreHistory.Clear();
+            _battleStartedAt = null;
+            _playerEliminationTimes.Clear();
         }
 
         raiseStateChange();
@@ -351,6 +366,44 @@ public class GameLogic
 
     public IEnumerable<Player> GetPlayersByScoreDescending() =>
         players.OrderByDescending(p => p.Score);
+
+    public IEnumerable<Player> GetPlayersByGameOverRank()
+    {
+        Dictionary<int, double> eliminated;
+        lock (lockForPlayersCellsPillValuesAndSpecialPontValues)
+        {
+            eliminated = new Dictionary<int, double>(_playerEliminationTimes);
+        }
+        return players
+            .OrderByDescending(p => p.Score > 0 ? 1 : 0)
+            .ThenByDescending(p => p.Score)
+            .ThenByDescending(p => eliminated.TryGetValue(p.Id, out var t) ? t : -1)
+            .ThenBy(p => p.Id);
+    }
+
+    public IReadOnlyList<ScoreSnapshot> ScoreHistory
+    {
+        get
+        {
+            lock (lockForPlayersCellsPillValuesAndSpecialPontValues)
+            {
+                return _scoreHistory.ToList();
+            }
+        }
+    }
+
+    public double? BattleStartedAt => _battleStartedAt;
+
+    public IReadOnlyDictionary<int, double> PlayerEliminationTimes
+    {
+        get
+        {
+            lock (lockForPlayersCellsPillValuesAndSpecialPontValues)
+            {
+                return new Dictionary<int, double>(_playerEliminationTimes);
+            }
+        }
+    }
 
     public MoveResult? Move(string playerToken, Direction direction)
     {
@@ -437,6 +490,7 @@ public class GameLogic
         if (origDestinationCell.IsPillAvailable)
         {
             player.Score += getPointValue(newLocation);
+            RecordScore(player);
             ateAPill = true;
             remainingPills--;
         }
@@ -460,13 +514,22 @@ public class GameLogic
 
     private MoveResult attack(Player currentPlayer, Location currentLocation, Location newLocation, Player otherPlayer)
     {
-        //decrease the health of both players by the min health of the players
+        var elapsed = (DateTime.Now - _gameStartedAt).TotalSeconds;
         var minHealth = Math.Min(currentPlayer.Score, otherPlayer.Score);
         log.LogInformation("Player {currentPlayer} attacking {otherPlayer}", currentPlayer, otherPlayer);
 
         currentPlayer.Score -= minHealth;
+        if (currentPlayer.Score <= 0)
+            _playerEliminationTimes[currentPlayer.Id] = elapsed;
+        RecordScore(currentPlayer);
+
         otherPlayer.Score -= minHealth;
-        log.LogInformation("new scores: {currentPlayerScore}, {otherPlayerScore}", currentPlayer.Score, otherPlayer.Score);
+        if (otherPlayer.Score <= 0)
+            _playerEliminationTimes[otherPlayer.Id] = elapsed;
+        RecordScore(otherPlayer);
+
+        log.LogInformation("new scores: {currentPlayerScore}, {otherPlayerScore}",
+            currentPlayer.Score, otherPlayer.Score);
 
         if (removePlayerIfDead(currentPlayer) || removePlayerIfDead(otherPlayer))
         {
@@ -503,6 +566,13 @@ public class GameLogic
             log.LogInformation("Changing game state from {currentGameState} to {newGameState}", CurrentGameState, (CurrentGameState + 1));
             Interlocked.Increment(ref gameStateValue);
         }
+    }
+
+    private void RecordScore(Player player)
+    {
+        var elapsed = (DateTime.Now - _gameStartedAt).TotalSeconds;
+        _scoreHistory.Add(new ScoreSnapshot(
+            player.Id, player.Name, player.Score, elapsed, CurrentGameState));
     }
 
     private bool removePlayerIfDead(Player player)
@@ -550,6 +620,7 @@ public class GameLogic
             else
             {
                 Interlocked.Increment(ref gameStateValue);
+                _battleStartedAt = (DateTime.Now - _gameStartedAt).TotalSeconds;
                 log.LogInformation("No more pills available, changing game state to {gameState}", CurrentGameState);
             }
         }

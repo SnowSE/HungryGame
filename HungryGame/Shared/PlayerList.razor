@@ -112,7 +112,9 @@
                 <tbody>
                     @{
                         var rank = 0;
-                        var players = gameInfo.GetPlayersByScoreDescending();
+                        var players = gameInfo.IsGameOver
+                            ? gameInfo.GetPlayersByGameOverRank()
+                            : gameInfo.GetPlayersByScoreDescending();
                         if (viewMode == ViewMode.Top5)
                         {
                             players = players.Take(5);
@@ -143,7 +145,16 @@
                             </td>
                             @if (gameInfo.IsGameStarted)
                             {
-                                <td class="player-score">@p.Score.ToString("n0")</td>
+                                <td class="player-score">
+                                    @if (gameInfo.IsGameOver && gameInfo.PlayerEliminationTimes.TryGetValue(p.Id, out var t))
+                                    {
+                                        <span>lasted @t.ToString("F0")s</span>
+                                    }
+                                    else
+                                    {
+                                        @p.Score.ToString("n0")
+                                    }
+                                </td>
                             }
                         </tr>
                     }

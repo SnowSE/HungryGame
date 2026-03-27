@@ -1,0 +1,43 @@
+@* HungryGame/Shared/ScoreHistoryChart.razor *@
+@inject GameLogic gameInfo
+@inject IJSRuntime JS
+
+<div style="width:100%;height:calc(100vh - 160px);min-height:400px">
+    <canvas id="scoreChartCanvas"></canvas>
+</div>
+
+@code {
+    // The 10 neon colors, matching PlayerList.razor's PlayerColors array exactly.
+    // If PlayerList.razor's array changes, update this one too.
+    private static readonly string[] PlayerColors =
+    {
+        "#00ff88", "#ff006e", "#00b4d8", "#ffd60a", "#ff8c00",
+        "#b388ff", "#00ffdd", "#ff66aa", "#88ff00", "#ff8866"
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        var history = gameInfo.ScoreHistory.ToList(); // stable copy for the LINQ pass
+
+        var datasets = history
+            .GroupBy(s => s.PlayerId)
+            .Select(g =>
+            {
+                var colorIndex = (g.Key - 1) % PlayerColors.Length;
+                return new
+                {
+                    label = g.First().PlayerName ?? $"Player {g.Key}",
+                    color = PlayerColors[colorIndex],
+                    points = g.Select(s => new { x = s.ElapsedSeconds, y = s.Score }).ToArray()
+                };
+            })
+            .ToArray();
+
+        var maxTime = history.Count > 0 ? history.Max(s => s.ElapsedSeconds) : 0.0;
+
+        await JS.InvokeVoidAsync("scoreChart.init", "scoreChartCanvas");
+        await JS.InvokeVoidAsync("scoreChart.render", datasets, gameInfo.BattleStartedAt, maxTime);
+    }
+}
