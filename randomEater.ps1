@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(HelpMessage = "host and port of server")]    
-    [string]$url = "http://localhost:5291",
+    [string]$url = "https://hungrygame.azurewebsites.net",
     [Parameter(HelpMessage = "your player name")]    
     [string]$name = [DateTime]::Now.Ticks % 10000
 )
