@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Hungry Game favicon">
+  <defs>
+    <linearGradient id="bg" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#16213e"/>
+      <stop offset="1" stop-color="#0a0a1a"/>
+    </linearGradient>
+    <linearGradient id="border" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#00b4d8"/>
+      <stop offset="0.55" stop-color="#00ff88"/>
+      <stop offset="1" stop-color="#ff006e"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="#00ff88" flood-opacity="0.65"/>
+    </filter>
+    <filter id="pillGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#ffd60a" flood-opacity="0.9"/>
+    </filter>
+    <mask id="bitten-h">
+      <rect width="64" height="64" fill="#fff"/>
+      <circle cx="44" cy="18" r="6" fill="#000"/>
+      <circle cx="48" cy="22" r="3" fill="#000"/>
+    </mask>
+  </defs>
+
+  <rect x="5" y="5" width="54" height="54" rx="15" fill="url(#bg)"/>
+  <rect x="5" y="5" width="54" height="54" rx="15" fill="none" stroke="url(#border)" stroke-width="2.5"/>
+
+  <g opacity="0.18" stroke="#8be9ff" stroke-width="1">
+    <path d="M16 12v40M28 12v40M40 12v40M52 12v40"/>
+    <path d="M12 16h40M12 28h40M12 40h40M12 52h40"/>
+  </g>
+
+  <g mask="url(#bitten-h)" filter="url(#glow)">
+    <rect x="16" y="15" width="10" height="34" rx="4" fill="#00ff88"/>
+    <rect x="38" y="15" width="10" height="34" rx="4" fill="#00ff88"/>
+    <rect x="16" y="27" width="32" height="10" rx="4" fill="#00ff88"/>
+  </g>
+
+  <circle cx="52" cy="18" r="4" fill="#ffd60a" filter="url(#pillGlow)"/>
+  <circle cx="52" cy="18" r="1.2" fill="#fff6b0" opacity="0.95"/>
+
+  <path d="M18 47c6 4 22 4 28 0" fill="none" stroke="#ff006e" stroke-linecap="round" stroke-width="3" opacity="0.9"/>
+</svg>
