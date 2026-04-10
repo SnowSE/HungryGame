@@ -35,6 +35,110 @@
     <button class="btn btn-primary" @onclick="() => showModal = true">+ Create Game</button>
 </div>
 
+<!-- Getting Started / Tutorial -->
+<div class="game-card" style="margin-bottom:24px;">
+    <button @onclick="ToggleTutorial"
+            style="width:100%;display:flex;align-items:center;justify-content:space-between;
+                   background:none;border:none;cursor:pointer;padding:0;color:inherit;">
+        <span style="font-weight:700;font-size:1rem;color:var(--neon-cyan);">🎮 How to Play</span>
+        <span style="color:var(--text-muted);font-size:0.85rem;">@(showTutorial ? "▲ hide" : "▼ show")</span>
+    </button>
+
+    @if (showTutorial)
+    {
+        <div style="margin-top:20px;display:flex;flex-direction:column;gap:24px;">
+
+            <!-- Game phases -->
+            <div>
+                <h3 style="color:var(--text-secondary);font-size:0.8rem;text-transform:uppercase;
+                           letter-spacing:0.08em;margin-bottom:12px;">Game Phases</h3>
+                <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:0.85rem;">
+                    <div style="flex:1;min-width:160px;padding:12px;background:var(--bg-card-hover);
+                                border-radius:var(--radius-md);border:1px solid var(--border-subtle);">
+                        <div style="margin-bottom:6px;">
+                            <span class="game-state-badge state-joining" style="font-size:0.6rem;padding:2px 8px;">
+                                <span class="state-dot"></span> Joining
+                            </span>
+                        </div>
+                        <p style="color:var(--text-secondary);margin:0;">Players register before the board opens. The game creator starts the match when everyone is ready.</p>
+                    </div>
+                    <div style="flex:1;min-width:160px;padding:12px;background:var(--bg-card-hover);
+                                border-radius:var(--radius-md);border:1px solid var(--border-subtle);">
+                        <div style="margin-bottom:6px;">
+                            <span class="game-state-badge state-eating" style="font-size:0.6rem;padding:2px 8px;">
+                                <span class="state-dot"></span> Eating
+                            </span>
+                        </div>
+                        <p style="color:var(--text-secondary);margin:0;">The board is filled with pills. Move around to eat them — pills score increasing values (1, 2, 3 …), so the later ones are worth more!</p>
+                    </div>
+                    <div style="flex:1;min-width:160px;padding:12px;background:var(--bg-card-hover);
+                                border-radius:var(--radius-md);border:1px solid var(--border-subtle);">
+                        <div style="margin-bottom:6px;">
+                            <span class="game-state-badge state-battle" style="font-size:0.6rem;padding:2px 8px;">
+                                <span class="state-dot"></span> Battle
+                            </span>
+                        </div>
+                        <p style="color:var(--text-secondary);margin:0;">When all pills are eaten, Battle begins. Move into another player to attack — both lose points equal to the lower score. Reach 0 and you're out!</p>
+                    </div>
+                    <div style="flex:1;min-width:160px;padding:12px;background:var(--bg-card-hover);
+                                border-radius:var(--radius-md);border:1px solid var(--border-subtle);">
+                        <div style="margin-bottom:6px;">
+                            <span class="game-state-badge state-gameover" style="font-size:0.6rem;padding:2px 8px;">
+                                <span class="state-dot"></span> Game Over
+                            </span>
+                        </div>
+                        <p style="color:var(--text-secondary);margin:0;">Last player standing wins. Eliminated players drop a bonus pill worth half the points lost — grab it fast!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- How to connect -->
+            <div>
+                <h3 style="color:var(--text-secondary);font-size:0.8rem;text-transform:uppercase;
+                           letter-spacing:0.08em;margin-bottom:12px;">How to Connect</h3>
+                <div style="display:flex;flex-wrap:wrap;gap:16px;font-size:0.85rem;">
+                    <div style="flex:1;min-width:220px;padding:14px;background:var(--bg-card-hover);
+                                border-radius:var(--radius-md);border:1px solid var(--border-subtle);">
+                        <div style="font-weight:700;color:var(--text-primary);margin-bottom:8px;">🖥️ Web Player</div>
+                        <p style="color:var(--text-secondary);margin:0 0 10px;">
+                            Use the built-in <a href="player">Web Player</a> to control your character from the browser with arrow keys — no coding required.
+                        </p>
+                    </div>
+                    <div style="flex:1;min-width:220px;padding:14px;background:var(--bg-card-hover);
+                                border-radius:var(--radius-md);border:1px solid var(--border-subtle);">
+                        <div style="font-weight:700;color:var(--text-primary);margin-bottom:8px;">🤖 Write a Bot</div>
+                        <p style="color:var(--text-secondary);margin:0 0 8px;">
+                            Control your player via HTTP. Click a game to grab its ID, then:
+                        </p>
+                        <ol style="color:var(--text-secondary);margin:0;padding-left:18px;line-height:1.8;">
+                            <li>Join: <code>GET /game/&#123;id&#125;/join?userName=YourName</code> → save the token</li>
+                            <li>Poll state: <code>GET /game/&#123;id&#125;/state</code></li>
+                            <li>Move: <code>GET /game/&#123;id&#125;/move/up?token=…</code></li>
+                        </ol>
+                        <div style="margin-top:10px;">
+                            <a href="help" style="font-size:0.8rem;">Full API reference →</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tips -->
+            <div>
+                <h3 style="color:var(--text-secondary);font-size:0.8rem;text-transform:uppercase;
+                           letter-spacing:0.08em;margin-bottom:12px;">💡 Tips</h3>
+                <ul style="color:var(--text-secondary);margin:0;padding-left:18px;
+                           line-height:1.9;font-size:0.85rem;">
+                    <li>Pills score sequentially — the 100th pill eaten across the whole board is worth 100 points. Race to eat as many as possible before others do.</li>
+                    <li>In Battle mode, attacking a player with equal score destroys you both. Target weaker players to survive.</li>
+                    <li>Eliminated players leave behind a bonus pill worth half the points lost — pick it up to swing the leaderboard.</li>
+                    <li>Create your own game with a custom board size from the <strong>+ Create Game</strong> button above.</li>
+                </ul>
+            </div>
+
+        </div>
+    }
+</div>
+
 @{
     var all = Registry.AllGames().ToList();
     var toJoin    = all.Where(g => g.Game.CurrentGameState == GameState.Joining).ToList();
@@ -151,9 +255,12 @@
 
 @code {
     private bool showModal;
+    private bool showTutorial;
     private bool isAdmin;
     private string? adminPasswordInput;
     private System.Timers.Timer? _refreshTimer;
+
+    private void ToggleTutorial() => showTutorial = !showTutorial;
 
     protected override void OnInitialized()
     {

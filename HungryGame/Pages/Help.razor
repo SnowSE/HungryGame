@@ -6,40 +6,139 @@
 <div class="page-header">
     <h1 class="game-title">Help & API</h1>
     <div class="nav-links">
-        <a href="/">Back to Game</a>
+        <a href="/">Lobby</a>
+        <span style="color:var(--text-muted)">·</span>
         <a href="scalar/v1">API Docs</a>
     </div>
 </div>
 
 <div class="help-container">
-    <div class="game-card">
-        <ol>
+
+    <div class="game-card" style="margin-bottom:24px;">
+        <h2 style="color:var(--neon-cyan);margin-bottom:16px;font-size:1.1rem;">Quick Start</h2>
+        <p style="color:var(--text-secondary);margin-bottom:16px;font-size:0.9rem;">
+            Each game has its own unique ID. Replace <code>{gameId}</code> in the examples below with
+            the ID shown on the game card in the lobby, or from the URL when viewing a game.
+        </p>
+        <ol style="display:flex;flex-direction:column;gap:20px;">
             <li>
-                <span>Join the game by making a request to:</span>
-                <pre>@(myurl)join?userName={yourName}</pre>
-                <span style="color: var(--text-muted);">This returns a token. Save it &mdash; you'll need it to move.</span>
+                <strong>Create a game</strong> (or pick an existing one from the <a href="/">lobby</a>):
+                <pre>POST @(myurl)games
+Content-Type: application/json
+
+@createGameBody</pre>
+                <span style="color: var(--text-muted);font-size:0.85rem;">Returns <code>&#123; "id": "...", "name": "..." &#125;</code> &mdash; save the game ID.</span>
             </li>
             <li>
-                Start the game:
-                <pre>@(myurl)start?rows={numRows}&amp;cols={numCols}&amp;password={secretPhrase}</pre>
+                <strong>Join the game</strong> to get your player token:
+                <pre>GET @(myurl)game/{gameId}/join?userName={yourName}</pre>
+                <span style="color: var(--text-muted);font-size:0.85rem;">Returns your token as a quoted string. Save it &mdash; you'll need it to move.</span>
             </li>
             <li>
-                <span>Once the game starts, send move requests:</span>
-                <pre>@(myurl)move/up?token={yourToken}</pre>
-                <pre>@(myurl)move/down?token={yourToken}</pre>
-                <pre>@(myurl)move/left?token={yourToken}</pre>
-                <pre>@(myurl)move/right?token={yourToken}</pre>
+                <strong>Start the game</strong> (only the game creator or an admin can do this):
+                <pre>GET @(myurl)game/{gameId}/start?creatorToken={yourToken}</pre>
             </li>
             <li>
-                Reset the game:
-                <pre>@(myurl)reset?password={secretPhrase}</pre>
+                <strong>Move your player</strong> once the game is in <em>Eating</em> or <em>Battle</em> state:
+                <pre>GET @(myurl)game/{gameId}/move/up?token={yourToken}
+GET @(myurl)game/{gameId}/move/down?token={yourToken}
+GET @(myurl)game/{gameId}/move/left?token={yourToken}
+GET @(myurl)game/{gameId}/move/right?token={yourToken}</pre>
+            </li>
+            <li>
+                <strong>Reset the game</strong> back to the Joining state:
+                <pre>GET @(myurl)game/{gameId}/reset?creatorToken={yourToken}</pre>
             </li>
         </ol>
     </div>
+
+    <div class="game-card" style="margin-bottom:24px;">
+        <h2 style="color:var(--neon-cyan);margin-bottom:16px;font-size:1.1rem;">All Endpoints</h2>
+        <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+            <thead>
+                <tr style="color:var(--text-muted);border-bottom:1px solid var(--border-subtle);">
+                    <th style="text-align:left;padding:6px 10px;">Method</th>
+                    <th style="text-align:left;padding:6px 10px;">Path</th>
+                    <th style="text-align:left;padding:6px 10px;">Description</th>
+                </tr>
+            </thead>
+            <tbody style="color:var(--text-secondary);">
+                <tr style="border-bottom:1px solid var(--border-subtle);">
+                    <td style="padding:8px 10px;"><code>GET</code></td>
+                    <td style="padding:8px 10px;"><code>games</code></td>
+                    <td style="padding:8px 10px;">List all games</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border-subtle);">
+                    <td style="padding:8px 10px;"><code>POST</code></td>
+                    <td style="padding:8px 10px;"><code>games</code></td>
+                    <td style="padding:8px 10px;">Create a new game</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border-subtle);">
+                    <td style="padding:8px 10px;"><code>GET</code></td>
+                    <td style="padding:8px 10px;"><code>game/{gameId}/join?userName=…</code></td>
+                    <td style="padding:8px 10px;">Join a game, returns your token</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border-subtle);">
+                    <td style="padding:8px 10px;"><code>GET</code></td>
+                    <td style="padding:8px 10px;"><code>game/{gameId}/start?creatorToken=…</code></td>
+                    <td style="padding:8px 10px;">Start the game (creator or admin only)</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border-subtle);">
+                    <td style="padding:8px 10px;"><code>GET</code></td>
+                    <td style="padding:8px 10px;"><code>game/{gameId}/move/{dir}?token=…</code></td>
+                    <td style="padding:8px 10px;">Move your player (up / down / left / right)</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border-subtle);">
+                    <td style="padding:8px 10px;"><code>GET</code></td>
+                    <td style="padding:8px 10px;"><code>game/{gameId}/board</code></td>
+                    <td style="padding:8px 10px;">Get current board state</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border-subtle);">
+                    <td style="padding:8px 10px;"><code>GET</code></td>
+                    <td style="padding:8px 10px;"><code>game/{gameId}/players</code></td>
+                    <td style="padding:8px 10px;">Get player list with scores</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border-subtle);">
+                    <td style="padding:8px 10px;"><code>GET</code></td>
+                    <td style="padding:8px 10px;"><code>game/{gameId}/state</code></td>
+                    <td style="padding:8px 10px;">Get current game state string</td>
+                </tr>
+                <tr>
+                    <td style="padding:8px 10px;"><code>GET</code></td>
+                    <td style="padding:8px 10px;"><code>game/{gameId}/reset?creatorToken=…</code></td>
+                    <td style="padding:8px 10px;">Reset game to Joining state (creator or admin only)</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="game-card">
+        <h2 style="color:var(--neon-cyan);margin-bottom:16px;font-size:1.1rem;">Game States</h2>
+        <div style="display:flex;flex-direction:column;gap:12px;font-size:0.9rem;">
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+                <span class="game-state-badge state-joining" style="font-size:0.65rem;padding:3px 10px;white-space:nowrap;flex-shrink:0;">Joining</span>
+                <span style="color:var(--text-secondary);">Players register. The board is not yet visible. The game creator starts the game when everyone is ready.</span>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+                <span class="game-state-badge state-eating" style="font-size:0.65rem;padding:3px 10px;white-space:nowrap;flex-shrink:0;">Eating</span>
+                <span style="color:var(--text-secondary);">Move around the board eating pills. Each pill scores the next value in the sequence (1, 2, 3 … so later pills are worth more). You cannot attack other players yet.</span>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+                <span class="game-state-badge state-battle" style="font-size:0.65rem;padding:3px 10px;white-space:nowrap;flex-shrink:0;">Battle</span>
+                <span style="color:var(--text-secondary);">All pills are gone. Move into another player to attack. Both players lose points equal to the lower score. The player who reaches 0 is eliminated and drops a bonus pill. Last player standing wins.</span>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+                <span class="game-state-badge state-gameover" style="font-size:0.65rem;padding:3px 10px;white-space:nowrap;flex-shrink:0;">Game Over</span>
+                <span style="color:var(--text-secondary);">The final leaderboard is shown. The creator can reset to play again.</span>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 @code {
-    string myurl;
+    string myurl = "";
+    string createGameBody = """{ "name": "My Game", "creatorToken": "secret", "numRows": 10, "numCols": 10 }""";
 
     protected override void OnInitialized()
     {
