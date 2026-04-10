@@ -11,8 +11,18 @@
             <EditForm Model="@model" OnValidSubmit="HandleSubmit">
                 <div class="modal-field">
                     <label>Game Name</label>
-                    <InputText @bind-Value="model.Name" placeholder="e.g. Friday Night Showdown"
-                               class="form-control" maxlength="60" />
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <InputText @bind-Value="model.Name" placeholder="Enter a name..."
+                                   class="form-control" maxlength="60" style="flex:1;" />
+                        <button type="button" @onclick="PickRandomName"
+                                title="Pick a different random name"
+                                style="background:var(--bg-card);border:1px solid var(--border-subtle);color:var(--text-secondary);border-radius:var(--radius-md);padding:6px 10px;cursor:pointer;font-size:1rem;flex-shrink:0;transition:border-color 0.2s,color 0.2s;"
+                                onmouseover="this.style.color='var(--neon-cyan)';this.style.borderColor='var(--neon-cyan)';"
+                                onmouseout="this.style.color='var(--text-secondary)';this.style.borderColor='var(--border-subtle)';">&#x21BA;</button>
+                    </div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px;">
+                        A random name was picked — type your own or click &#x21BA; for another
+                    </div>
                 </div>
 
                 <div class="modal-row">
@@ -63,21 +73,54 @@
     private int MaxRows => IsAdmin ? 9999 : 100;
     private int MaxCols => IsAdmin ? 9999 : 150;
 
-    private CreateGameModel model = new();
-    private string? errorMessage;
-
     private class CreateGameModel
     {
         public string Name { get; set; } = "";
         public int NumRows { get; set; } = 20;
         public int NumCols { get; set; } = 30;
         public bool IsTimed { get; set; }
-        public int? TimeLimitMinutes { get; set; }
+        public int? TimeLimitMinutes { get; set; } = 5;
+    }
+
+    private CreateGameModel model = new();
+    private string? errorMessage;
+
+    private static readonly Random _rng = new();
+
+    // 100 fun game names: 10 adj × 10 suffixes
+    private static readonly string[] _adjectives =
+    [
+        "Frantic", "Neon", "Cosmic", "Blazing", "Electric",
+        "Frozen", "Savage", "Chaotic", "Turbo", "Shadow"
+    ];
+    private static readonly string[] _suffixes =
+    [
+        "Showdown", "Rumble", "Frenzy", "Chaos",
+        "Arena", "Blitz", "Mayhem", "Derby", "Brawl", "Dash"
+    ];
+
+    private static string GenerateRandomName() =>
+        $"{_adjectives[_rng.Next(_adjectives.Length)]} " +
+        $"{_suffixes[_rng.Next(_suffixes.Length)]}";
+
+    protected override void OnParametersSet()
+    {
+        // Pick a random name each time the modal opens
+        if (IsVisible && string.IsNullOrEmpty(model.Name))
+            model.Name = GenerateRandomName();
+    }
+
+    private void PickRandomName()
+    {
+        model.Name = GenerateRandomName();
     }
 
     private async Task HandleSubmit()
     {
         errorMessage = null;
+        if (string.IsNullOrWhiteSpace(model.Name))
+            model.Name = GenerateRandomName();
+
         var userToken = await JS.InvokeAsync<string?>("localStorage.getItem", "userToken");
         if (string.IsNullOrWhiteSpace(userToken))
         {

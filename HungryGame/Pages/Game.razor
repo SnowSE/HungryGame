@@ -1,4 +1,5 @@
 @page "/game/{Id}"
+@implements IDisposable
 @inject GameRegistry Registry
 @inject IConfiguration Config
 @inject IJSRuntime JS
@@ -27,7 +28,7 @@ else
             <span style="color:var(--text-muted)">·</span>
             <a href="scalar/v1">API Client</a>
             <span style="color:var(--text-muted)">·</span>
-            <a href="player">Web Player</a>
+            <a href="player?gameId=@instance.Id">Web Player</a>
             <span style="color:var(--text-muted)">·</span>
             @if (SharedState.IsAdmin)
             {
@@ -75,7 +76,7 @@ else
                 else
                 {
                     <div class="game-main">
-                        <AddPlayer />
+                        <Board />
                     </div>
                     <div class="game-sidebar">
                         <StartGameButton />
@@ -98,6 +99,16 @@ else
     {
         instance = Registry.GetGame(Id);
         instance?.Game.GameStateChanged += OnGameStateChanged;
+        instance?.Game.GameOver += OnGameStateChanged;
+    }
+
+    void IDisposable.Dispose()
+    {
+        if (instance != null)
+        {
+            instance.Game.GameStateChanged -= OnGameStateChanged;
+            instance.Game.GameOver -= OnGameStateChanged;
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

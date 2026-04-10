@@ -1,12 +1,92 @@
 @page "/player"
+@inject GameRegistry Registry
 
-<PageTitle>Player - Hungry Game</PageTitle>
+<PageTitle>Web Player — Hungry Game</PageTitle>
 
 <div class="page-header">
-    <h1 class="game-title">Player</h1>
+    <h1 class="game-title">Web Player</h1>
     <div class="nav-links">
-        <a href="/">Back to Game</a>
+        <a href="/">Lobby</a>
     </div>
 </div>
 
-<AddPlayer />
+@if (selectedGame != null)
+{
+    <div style="margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+        <span style="color:var(--text-muted);font-size:0.8rem;">Playing in</span>
+        <strong style="color:var(--text-primary);">@selectedGame.Name</strong>
+        <span class="lobby-card-id">@selectedGame.Id</span>
+        <button @onclick="Deselect"
+                style="background:none;border:none;color:var(--text-muted);font-size:0.75rem;cursor:pointer;padding:0;text-decoration:underline;">
+            change game
+        </button>
+    </div>
+    <CascadingValue Value="selectedGame.Game">
+        <AddPlayer />
+    </CascadingValue>
+}
+else if (GameId != null)
+{
+    <div class="error-message" style="max-width:420px;margin:40px auto;text-align:center;">
+        Game <strong>@GameId</strong> not found. <a href="/">Back to Lobby</a>
+    </div>
+}
+else
+{
+    @if (JoinableGames.Count == 0)
+    {
+        <div class="game-card" style="max-width:420px;margin:40px auto;text-align:center;">
+            <p style="color:var(--text-secondary);margin-bottom:16px;">No games are open to join right now.</p>
+            <a href="/" class="btn btn-primary">Go to Lobby</a>
+        </div>
+    }
+    else
+    {
+        <div style="max-width:520px;margin:32px auto;">
+            <p style="color:var(--text-secondary);margin-bottom:20px;font-size:0.9rem;">
+                Select a game to join:
+            </p>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                @foreach (var g in JoinableGames)
+                {
+                    <button @onclick="() => SelectGame(g)"
+                            style="display:flex;align-items:center;gap:14px;padding:14px 18px;
+                                   background:var(--bg-card);border:1px solid var(--border-subtle);
+                                   border-radius:var(--radius-md);cursor:pointer;text-align:left;
+                                   color:inherit;transition:border-color 0.2s,background 0.2s;"
+                            onmouseover="this.style.borderColor='var(--neon-cyan)';this.style.background='var(--bg-card-hover)';"
+                            onmouseout="this.style.borderColor='var(--border-subtle)';this.style.background='var(--bg-card)';">
+                        <span style="font-weight:700;color:var(--text-primary);flex:1;">@g.Name</span>
+                        <span class="lobby-card-id">@g.Id</span>
+                        <span style="font-size:0.75rem;color:var(--text-muted);">
+                            @g.Game.GetPlayersByScoreDescending().Count() waiting
+                        </span>
+                    </button>
+                }
+            </div>
+        </div>
+    }
+}
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "gameId")]
+    public string? GameId { get; set; }
+
+    private GameInstance? selectedGame;
+
+    private List<GameInstance> JoinableGames => Registry.AllGames()
+        .Where(g => g.Game.CurrentGameState == GameState.Joining)
+        .OrderBy(g => g.CreatedAt)
+        .ToList();
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrEmpty(GameId))
+            selectedGame = Registry.GetGame(GameId);
+    }
+
+    private void SelectGame(GameInstance game) => selectedGame = game;
+
+    private void Deselect() => selectedGame = null;
+}
