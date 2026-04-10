@@ -1,0 +1,22 @@
+{
+  "universe_usage_history": [
+    {
+      "universe": "Firefly",
+      "assignment_id": "hungrygame-2026-04-09",
+      "used_at": "2026-04-09T00:00:00Z"
+    }
+  ],
+  "assignment_cast_snapshots": {
+    "hungrygame-2026-04-09": {
+      "universe": "Firefly",
+      "agents": {
+        "lead": "Mal",
+        "backend": "Wash",
+        "frontend": "Kaylee",
+        "tester": "Zoe",
+        "devops": "Shepherd"
+      },
+      "created_at": "2026-04-09T00:00:00Z"
+    }
+  }
+}
