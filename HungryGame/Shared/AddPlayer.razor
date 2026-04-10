@@ -1,4 +1,3 @@
-@inject GameLogic gameInfo
 @inject ILogger<AddPlayer> log
 @using System.ComponentModel.DataAnnotations;
 @using Microsoft.AspNetCore.Mvc
@@ -37,6 +36,9 @@
 
 @code
 {
+    [CascadingParameter]
+    public GameLogic gameInfo { get; set; } = default!;
+
     private class JoinPlayerInfo
     {
         [Required]

@@ -29,13 +29,10 @@ public class GameLogic
     private readonly Dictionary<Location, int> specialPointValues = new();
     private readonly HashSet<Player> playersThatMovedThisGame = new();
     private readonly HashSet<Location> emptyCells = new();
-    private readonly HashSet<string> adminTokens = new();
-
     private int remainingPills = 0;
     private int activePlayersCount = 0;
     private int number = 0;
     private long gameStateValue = 0;
-    private readonly IConfiguration config;
     private DateTime _gameStartedAt = DateTime.Now;
     private readonly List<ScoreSnapshot> _scoreHistory = new();
     private double? _battleStartedAt;
@@ -47,55 +44,21 @@ public class GameLogic
     public int MaxCols { get; private set; } = 0;
     public NewGameInfo? LastGameInfo { get; private set; }
     public event EventHandler? GameStateChanged;
+    public event EventHandler? GameOver;
 
-    public GameLogic(IConfiguration config, ILogger<GameLogic> log, IRandomService random)
+    public GameLogic(ILogger<GameLogic> log, IRandomService random)
     {
-        this.config = config ?? throw new ArgumentNullException(nameof(config));
         this.log = log;
         this.random = random;
     }
 
-    public string? AdminLogin(string password)
+    public void BootPlayer(int playerId)
     {
-        if (password != config["SECRET_CODE"])
-            return null;
-
-        var token = Guid.NewGuid().ToString();
-        lock (lockForPlayersCellsPillValuesAndSpecialPontValues)
-        {
-            adminTokens.Add(token);
-        }
-        log.LogInformation("Admin session created");
-        return token;
-    }
-
-    public void AdminLogout(string adminToken)
-    {
-        lock (lockForPlayersCellsPillValuesAndSpecialPontValues)
-        {
-            adminTokens.Remove(adminToken);
-        }
-    }
-
-    public bool IsValidAdminToken(string? token)
-    {
-        if (string.IsNullOrWhiteSpace(token)) return false;
-        lock (lockForPlayersCellsPillValuesAndSpecialPontValues)
-        {
-            return adminTokens.Contains(token);
-        }
-    }
-
-    public void BootPlayer(string adminToken, int playerId)
-    {
-        if (!IsValidAdminToken(adminToken)) return;
-
         lock (lockForPlayersCellsPillValuesAndSpecialPontValues)
         {
             var player = players.FirstOrDefault(p => p.Id == playerId);
             if (player == null) return;
 
-            // Remove from board if on it
             if (player.Token != null && playerLocations.TryGetValue(player.Token, out var location))
             {
                 playerLocations.Remove(player.Token);
@@ -108,19 +71,16 @@ public class GameLogic
 
             players.Remove(player);
             playersThatMovedThisGame.Remove(player);
-            log.LogInformation("Admin booted player {playerName} (ID: {playerId})", player.Name, playerId);
+            log.LogInformation("Booted player {playerName} (ID: {playerId})", player.Name, playerId);
         }
 
         raiseStateChange();
     }
 
-    public void ClearAllPlayers(string adminToken)
+    public void ClearAllPlayers()
     {
-        if (!IsValidAdminToken(adminToken)) return;
-
         lock (lockForPlayersCellsPillValuesAndSpecialPontValues)
         {
-            // Clear players off the board
             foreach (var player in players)
             {
                 if (player.Token != null && playerLocations.TryGetValue(player.Token, out var location))
@@ -136,7 +96,7 @@ public class GameLogic
             playerLocations.Clear();
             playersThatMovedThisGame.Clear();
             activePlayersCount = 0;
-            log.LogInformation("Admin cleared all players");
+            log.LogInformation("Cleared all players");
         }
 
         raiseStateChange();
@@ -162,15 +122,8 @@ public class GameLogic
     public TimeSpan? TimeRemaining => GameEndsOn.HasValue ? GameEndsOn.Value - DateTime.Now : null;
     private Timer gameTimer;
 
-    public void StartGame(NewGameInfo gameInfo)
+    public void ConfigureGame(NewGameInfo gameInfo)
     {
-        bool authorized = gameInfo.SecretCode == config["SECRET_CODE"]
-                       || IsValidAdminToken(gameInfo.AdminToken);
-        if (!authorized || Interlocked.Read(ref gameStateValue) != 0)
-        {
-            return;
-        }
-
         MaxRows = gameInfo.NumRows;
         MaxCols = gameInfo.NumColumns;
         LastGameInfo = gameInfo;
@@ -180,7 +133,17 @@ public class GameLogic
             var minutes = gameInfo.TimeLimitInMinutes.Value;
             TimeLimit = TimeSpan.FromMinutes(minutes);
             GameEndsOn = DateTime.Now.Add(TimeLimit.Value);
-            gameTimer = new Timer(gameOverCallback, null, TimeLimit.Value, Timeout.InfiniteTimeSpan);
+        }
+    }
+
+    public void StartGame()
+    {
+        if (Interlocked.Read(ref gameStateValue) != 0 || MaxRows == 0)
+            return;
+
+        if (LastGameInfo?.IsTimed == true && LastGameInfo.TimeLimitInMinutes.HasValue)
+        {
+            gameTimer = new Timer(gameOverCallback, null, TimeLimit!.Value, Timeout.InfiniteTimeSpan);
         }
 
         _scoreHistory.Clear();
@@ -193,6 +156,8 @@ public class GameLogic
     {
         log.LogInformation($"Timer ran out.  Game over.");
         Interlocked.Exchange(ref gameStateValue, 3);
+        GameOver?.Invoke(this, EventArgs.Empty);
+        raiseStateChange();
 
         await Task.Delay(TimeSpan.FromSeconds(5));
 
@@ -288,15 +253,10 @@ public class GameLogic
         raiseStateChange();
     }
 
-    public void ResetGame(string secretCode, string? adminToken = null)
+    public void ResetGame()
     {
-        bool authorized = secretCode == config["SECRET_CODE"]
-                       || IsValidAdminToken(adminToken);
-        if (!authorized || Interlocked.Read(ref gameStateValue) == 0)
-        {
+        if (Interlocked.Read(ref gameStateValue) == 0)
             return;
-        }
-
         resetGame();
     }
 
@@ -565,6 +525,7 @@ public class GameLogic
         {
             log.LogInformation("Changing game state from {currentGameState} to {newGameState}", CurrentGameState, (CurrentGameState + 1));
             Interlocked.Increment(ref gameStateValue);
+            GameOver?.Invoke(this, EventArgs.Empty);
         }
     }
 
@@ -616,6 +577,7 @@ public class GameLogic
             {
                 Interlocked.Exchange(ref gameStateValue, 3);//game over
                 log.LogInformation("Only 1 player left, not going to battle mode - game over.");
+                GameOver?.Invoke(this, EventArgs.Empty);
             }
             else
             {

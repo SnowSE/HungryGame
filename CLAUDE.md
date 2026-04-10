@@ -52,7 +52,6 @@ The Blazor Server UI subscribes to `GameLogic.GameStateChanged` events and re-re
 |---|---|
 | `clients/foolhearty` | Hosted service bot; picks a play style (`Foolhearty` or `SmartyPants`) via `PLAY_STYLE` env var |
 | `clients/massive` | Spawns many simultaneous bots (`CLIENT_COUNT` env var) for load testing |
-| `clients/Viewer` | Blazor WASM spectator view of the board |
 
 ### Aspire orchestration (`HungryGame.AppHost/`)
 

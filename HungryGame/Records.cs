@@ -22,11 +22,25 @@ public enum Direction { Up, Down, Left, Right, Undefined };
 
 public class SharedStateClass
 {
-    public string CellIcon { get; set; } = "🌯";
-    public bool UseCustomEmoji { get; set; } = false;
-    public DateTime? GameEndsOn { get; set; }
     public bool IsAdmin { get; set; }
     public string? AdminPassword { get; set; }
+    public string? UserToken { get; set; }
+    public bool IsCreator { get; set; }
+    public bool CanManage => IsAdmin || IsCreator;
 }
 
 public record MoveResult(Location NewLocation, bool AteAPill);
+
+public record CreateGameRequest(
+    string Name,
+    int NumRows,
+    int NumCols,
+    string CreatorToken,
+    bool IsTimed,
+    int? TimeLimitMinutes,
+    string? AdminToken);
+
+public record AuthRequest(string? CreatorToken, string? AdminToken);
+public record BootRequest(int PlayerId, string? CreatorToken, string? AdminToken);
+public record AdminLoginRequest(string Password);
+public record AdminLogoutRequest(string AdminToken);

@@ -12,6 +12,7 @@ public class MassiveClient
     private readonly ILogger<Player> playerLogger;
     private readonly SocketsHttpHandler socketsHandler;
     private readonly string url;
+    private readonly string _gameId;
     private CancellationToken cancellationToken;
 
     public MassiveClient(ILogger<MassiveClient> logger, IConfiguration config, ILogger<Player> playerLogger)
@@ -21,7 +22,8 @@ public class MassiveClient
         this.playerLogger = playerLogger;
         socketsHandler = new SocketsHttpHandler();
         url = config["SERVER"] ?? "https://hungrygame.azurewebsites.net";
-
+        _gameId = config["GAME_ID"] ?? throw new InvalidOperationException(
+            "GAME_ID environment variable is required.");
     }
 
     public async Task Run(int numClients, CancellationToken cancellationToken)
@@ -33,7 +35,7 @@ public class MassiveClient
         logger.LogInformation($"Creating {numClients} players");
         var players = (from i in Enumerable.Range(0, numClients)
                        let name = $"Massive_{i:0000}"
-                       select new Player(config, name, socketsHandler, url, playerLogger)).ToList();
+                       select new Player(config, name, socketsHandler, url, _gameId, playerLogger)).ToList();
 
         var gameStartTask = players.First().WaitForGameToStart(cancellationToken);
 
@@ -129,16 +131,16 @@ public class MassiveClient
         Interlocked.Exchange(ref board, newBoard);
         Interlocked.Exchange(ref map, newMap);
 
-        var newPlayers = await httpClient.GetFromJsonAsync<IEnumerable<PlayerInfo>>($"{url}/players");
+        var newPlayers = await httpClient.GetFromJsonAsync<IEnumerable<PlayerInfo>>($"{url}/game/{_gameId}/players");
         Interlocked.Exchange(ref players, newPlayers);
 
-        var newGameState = await httpClient.GetStringAsync($"{url}/state");
+        var newGameState = await httpClient.GetStringAsync($"{url}/game/{_gameId}/state");
         Interlocked.Exchange(ref gameState, newGameState);
         logger.LogInformation("UPDATED BOARD");
     }
     protected async Task<List<Cell>> getBoardAsync()
     {
-        var boardString = await new HttpClient(socketsHandler).GetStringAsync($"{url}/board");
+        var boardString = await new HttpClient(socketsHandler).GetStringAsync($"{url}/game/{_gameId}/board");
         return JsonSerializer.Deserialize<IEnumerable<Cell>>(boardString)?.ToList() ?? throw new Exception("Unable to get board info");
     }
 }
@@ -147,17 +149,18 @@ public class Player
 {
     protected readonly HttpClient httpClient;
     protected readonly string url;
+    private readonly string gameId;
     internal string? token;
     private readonly IConfiguration config;
-    string tokenFile => PlayerName + ".txt";
     private ILogger<Player> logger;
 
-    public Player(IConfiguration config, string name, SocketsHttpHandler socketsHandler, string url, ILogger<Player> logger)
+    public Player(IConfiguration config, string name, SocketsHttpHandler socketsHandler, string url, string gameId, ILogger<Player> logger)
     {
         this.config = config;
         PlayerName = name;
         httpClient = new HttpClient(socketsHandler);
         this.url = url;
+        this.gameId = gameId;
         this.logger = logger;
     }
 
@@ -165,20 +168,12 @@ public class Player
 
     public async Task JoinGameAsync()
     {
-        if (File.Exists(PlayerName + ".txt"))
-        {
-            token = await File.ReadAllTextAsync(tokenFile);
-        }
-        else
-        {
-            token = await httpClient.GetStringAsync($"{url}/join?playerName={PlayerName}");
-            await File.WriteAllTextAsync(tokenFile, token);
-        }
+        token = await httpClient.GetStringAsync($"{url}/game/{gameId}/join?playerName={PlayerName}");
     }
 
     protected async Task<bool> checkIfGameOver()
     {
-        return (await httpClient.GetStringAsync($"{url}/state")) == "GameOver";
+        return (await httpClient.GetStringAsync($"{url}/game/{gameId}/state")) == "GameOver";
     }
 
     protected virtual private string tryNextDirection(string direction) => direction switch
@@ -266,17 +261,17 @@ public class Player
     }
     public async Task WaitForGameToStart(CancellationToken cancellationToken)
     {
-        var gameState = await httpClient.GetStringAsync($"{url}/state");
+        var gameState = await httpClient.GetStringAsync($"{url}/game/{gameId}/state");
         while (gameState == "Joining" || gameState == "GameOver")
         {
             await Task.Delay(2_000, cancellationToken);
-            gameState = await httpClient.GetStringAsync($"{url}/state", cancellationToken);
+            gameState = await httpClient.GetStringAsync($"{url}/game/{gameId}/state", cancellationToken);
         }
     }
 
     protected async Task<List<Cell>> getBoardAsync()
     {
-        var boardString = await httpClient.GetStringAsync($"{url}/board");
+        var boardString = await httpClient.GetStringAsync($"{url}/game/{gameId}/board");
         return JsonSerializer.Deserialize<IEnumerable<Cell>>(boardString)?.ToList() ?? throw new Exception("Unable to deserialize board");
     }
 
@@ -285,18 +280,14 @@ public class Player
         logger.LogInformation($"{PlayerName} moving {direction}");
         try
         {
-            return await httpClient.GetFromJsonAsync<MoveResult>($"{url}/move/{direction}?token={token}");
+            return await httpClient.GetFromJsonAsync<MoveResult>($"{url}/game/{gameId}/move/{direction}?token={token}");
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Error moving.");
-            if (File.Exists(tokenFile))
-            {
-                logger.LogInformation($"Deleting token file for {PlayerName} and re-joining game to get a new token...");
-                File.Delete(tokenFile);
-            }
+            logger.LogInformation($"Re-joining game to get a new token for {PlayerName}...");
             await JoinGameAsync();
-            return await httpClient.GetFromJsonAsync<MoveResult>($"{url}/move/{direction}?token={token}");
+            return await httpClient.GetFromJsonAsync<MoveResult>($"{url}/game/{gameId}/move/{direction}?token={token}");
         }
     }
 }

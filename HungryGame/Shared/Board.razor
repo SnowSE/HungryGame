@@ -1,4 +1,3 @@
-@inject GameLogic gameInfo
 @inject IJSRuntime JS
 
 <style>
@@ -155,6 +154,9 @@
 
 @code {
 
+    [CascadingParameter]
+    public GameLogic gameInfo { get; set; } = default!;
+
     private bool jsReady;
 
     protected override void OnInitialized()
@@ -210,9 +212,7 @@
             }
         }
 
-        var cellIcon = gameInfo.LastGameInfo?.CellIcon ?? "";
-        var useCustomEmoji = gameInfo.LastGameInfo?.UseCustomEmoji ?? false;
-        await JS.InvokeVoidAsync("boardRenderer.render", rows, cols, gridData, playerPositions, cellIcon, useCustomEmoji);
+        await JS.InvokeVoidAsync("boardRenderer.render", rows, cols, gridData, playerPositions);
     }
 
     private async Task ToggleFullScreen()

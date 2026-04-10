@@ -1,10 +1,3 @@
-<div class="reset-panel">
-    @if (SharedState.CanManage)
-    {
-        <button class="btn btn-secondary w-100" @onclick="Reset">Reset Game</button>
-    }
-</div>
-
 @code {
     [CascadingParameter]
     public GameLogic gameInfo { get; set; } = default!;
@@ -12,9 +5,14 @@
     [CascadingParameter]
     public SharedStateClass SharedState { get; set; } = default!;
 
-    private void Reset()
+    private void StartGame()
     {
         if (SharedState.CanManage)
-            gameInfo.ResetGame();
+            gameInfo.StartGame();
     }
+}
+
+@if (SharedState.CanManage && !gameInfo.IsGameStarted)
+{
+    <button class="btn btn-primary w-100" @onclick="StartGame">Launch Game</button>
 }

@@ -1,109 +1,202 @@
 @page "/"
-@inject GameLogic gameInfo
-@inject IConfiguration config
+@inject GameRegistry Registry
+@inject IConfiguration Config
 @inject IJSRuntime JS
+@implements IDisposable
 
-<PageTitle>Hungry Game</PageTitle>
+<PageTitle>Hungry Game — Lobby</PageTitle>
 
 <div class="page-header">
     <h1 class="game-title">Hungry Game</h1>
     <div class="nav-links">
         <a href="help">Help / Docs</a>
+        <span style="color:var(--text-muted)">·</span>
         <a href="scalar/v1">API Client</a>
+        <span style="color:var(--text-muted)">·</span>
         <a href="player">Web Player</a>
-        @if (SharedState.IsAdmin)
+        <span style="color:var(--text-muted)">·</span>
+        @if (isAdmin)
         {
             <a href="javascript:void(0)" @onclick="AdminLogout">Logout</a>
         }
         else
         {
-            <form style="display: inline-flex; align-items: center; gap: 4px;" @onsubmit="AdminLogin">
-                <input type="password" @bind="adminPasswordInput" placeholder="admin pw" style="width: 90px; padding: 2px 6px; font-size: 0.8rem; background: #222; border: 1px solid #555; color: #eee; border-radius: 4px;" />
-                <button type="submit" style="padding: 2px 8px; font-size: 0.8rem; background: #333; border: 1px solid #555; color: #eee; border-radius: 4px; cursor: pointer;">Login</button>
+            <form style="display:inline-flex;align-items:center;gap:4px;" @onsubmit="AdminLogin">
+                <input type="password" @bind="adminPasswordInput" placeholder="admin pw"
+                       style="width:90px;padding:2px 6px;font-size:0.8rem;background:#222;border:1px solid #555;color:#eee;border-radius:4px;" />
+                <button type="submit" style="padding:2px 8px;font-size:0.8rem;background:#333;border:1px solid #555;color:#eee;border-radius:4px;cursor:pointer;">Login</button>
             </form>
         }
     </div>
 </div>
 
-<CascadingValue Value=SharedState>
-    <CurrentGameState />
+<div class="lobby-topbar">
+    <span class="lobby-tagline">Pick a game to watch or join, or create your own.</span>
+    <button class="btn btn-primary" @onclick="() => showModal = true">+ Create Game</button>
+</div>
 
-    <div class="game-layout mt-3">
-        @if (gameInfo.IsGameStarted)
+@{
+    var all = Registry.AllGames().ToList();
+    var toJoin    = all.Where(g => g.Game.CurrentGameState == GameState.Joining).ToList();
+    var inProgress = all.Where(g => g.Game.CurrentGameState is GameState.Eating or GameState.Battle).ToList();
+    var completed  = all.Where(g => g.Game.IsGameOver).OrderByDescending(g => g.CompletedAt).ToList();
+}
+
+<!-- Games to Join -->
+<div class="lobby-section lobby-join">
+    <div class="lobby-section-heading">
+        <div class="lobby-dot"></div>
+        <h2>Games to Join</h2>
+        <span class="lobby-section-count">@toJoin.Count</span>
+    </div>
+    <div class="lobby-card-grid">
+        @foreach (var g in toJoin)
         {
-            if (gameInfo.IsGameOver)
-            {
-                <div class="game-main">
-                    <ScoreHistoryChart />
+            <a href="/game/@g.Id" class="lobby-game-card">
+                <div class="lobby-card-name">@g.Name</div>
+                <div class="lobby-card-id">@g.Id</div>
+                <div class="lobby-card-divider"></div>
+                <div class="lobby-card-meta">
+                    <div class="lobby-card-meta-row">
+                        <span class="lobby-card-label">Players</span>
+                        <span class="lobby-card-value">@g.Game.GetPlayersByScoreDescending().Count() waiting</span>
+                    </div>
+                    <div class="lobby-card-meta-row">
+                        <span class="lobby-card-label">Board</span>
+                        <span class="lobby-card-value">@g.Game.MaxRows × @g.Game.MaxCols</span>
+                    </div>
                 </div>
-                <div class="game-sidebar">
-                    <ResetGame />
-                    <PlayerList />
+                <div class="game-state-badge state-joining" style="font-size:0.6rem;padding:3px 8px;">
+                    <span class="state-dot"></span> Joining
                 </div>
-            }
-            else
-            {
-                <div class="game-main">
-                    <Board />
-                </div>
-                <div class="game-sidebar">
-                    @if (gameInfo.IsGameStarted)
-                    {
-                        <ResetGame />
-                    }
-                    <PlayerList />
-                </div>
-            }
-        }
-        else
-        {
-            <div class="game-main">
-                <StartGame />
-            </div>
-            <div class="game-sidebar">
-                <PlayerList />
-            </div>
+            </a>
         }
     </div>
-</CascadingValue>
+</div>
 
-@code
-{
-    public SharedStateClass SharedState { get; set; } = new();
+<!-- In Progress -->
+<div class="lobby-section lobby-progress">
+    <div class="lobby-section-heading">
+        <div class="lobby-dot"></div>
+        <h2>In Progress</h2>
+        <span class="lobby-section-count">@inProgress.Count</span>
+    </div>
+    <div class="lobby-card-grid">
+        @foreach (var g in inProgress)
+        {
+            var stateClass = g.Game.CurrentGameState == GameState.Battle ? "state-battle" : "state-eating";
+            <a href="/game/@g.Id" class="lobby-game-card">
+                <div class="lobby-card-name">@g.Name</div>
+                <div class="lobby-card-id">@g.Id</div>
+                <div class="lobby-card-divider"></div>
+                <div class="lobby-card-meta">
+                    <div class="lobby-card-meta-row">
+                        <span class="lobby-card-label">Players</span>
+                        <span class="lobby-card-value">@g.Game.GetPlayersByScoreDescending().Count() alive</span>
+                    </div>
+                    <div class="lobby-card-meta-row">
+                        <span class="lobby-card-label">Board</span>
+                        <span class="lobby-card-value">@g.Game.MaxRows × @g.Game.MaxCols</span>
+                    </div>
+                </div>
+                <div class="game-state-badge @stateClass" style="font-size:0.6rem;padding:3px 8px;">
+                    <span class="state-dot"></span> @g.Game.CurrentGameState
+                </div>
+            </a>
+        }
+    </div>
+</div>
+
+<!-- Completed -->
+<div class="lobby-section lobby-completed">
+    <div class="lobby-section-heading">
+        <div class="lobby-dot"></div>
+        <h2>Completed</h2>
+        <span class="lobby-section-count">@completed.Count</span>
+    </div>
+    <div class="lobby-card-grid">
+        @foreach (var g in completed)
+        {
+            var winner = g.Game.GetPlayersByGameOverRank().FirstOrDefault();
+            var age = g.CompletedAt.HasValue
+                ? FormatAge(DateTime.UtcNow - g.CompletedAt.Value)
+                : "recently";
+            <a href="/game/@g.Id" class="lobby-game-card">
+                <div class="lobby-card-name">@g.Name</div>
+                <div class="lobby-card-id">@g.Id</div>
+                <div class="lobby-card-divider"></div>
+                @if (winner != null)
+                {
+                    <div class="lobby-card-winner"><span class="label">Winner: </span>@winner.Name</div>
+                }
+                <div class="lobby-card-meta">
+                    <div class="lobby-card-meta-row">
+                        <span class="lobby-card-label">Players</span>
+                        <span class="lobby-card-value">@g.Game.GetPlayersByScoreDescending().Count()</span>
+                    </div>
+                    <div class="lobby-card-meta-row">
+                        <span class="lobby-card-label">Ended</span>
+                        <span class="lobby-card-value">@age</span>
+                    </div>
+                </div>
+                <div class="game-state-badge state-gameover" style="font-size:0.6rem;padding:3px 8px;">
+                    <span class="state-dot"></span> Game Over
+                </div>
+            </a>
+        }
+    </div>
+</div>
+
+<CreateGameModal IsVisible="showModal" IsAdmin="isAdmin" OnClose="() => showModal = false" />
+
+@code {
+    private bool showModal;
+    private bool isAdmin;
     private string? adminPasswordInput;
+    private System.Timers.Timer? _refreshTimer;
 
     protected override void OnInitialized()
     {
-        gameInfo.GameStateChanged += (_, _) => InvokeAsync(() => StateHasChanged());
+        _refreshTimer = new System.Timers.Timer(5_000);
+        _refreshTimer.Elapsed += (_, _) => InvokeAsync(StateHasChanged);
+        _refreshTimer.Start();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
         var saved = await JS.InvokeAsync<string?>("localStorage.getItem", "adminPassword");
-        if (saved != null && saved == config["SECRET_CODE"])
+        if (saved != null && saved == Config["SECRET_CODE"])
         {
-            SharedState.IsAdmin = true;
-            SharedState.AdminPassword = saved;
+            isAdmin = true;
             StateHasChanged();
         }
     }
 
     private async Task AdminLogin()
     {
-        if (adminPasswordInput == config["SECRET_CODE"])
+        if (adminPasswordInput == Config["SECRET_CODE"])
         {
-            SharedState.IsAdmin = true;
-            SharedState.AdminPassword = adminPasswordInput;
+            isAdmin = true;
             await JS.InvokeVoidAsync("localStorage.setItem", "adminPassword", adminPasswordInput);
+            StateHasChanged();
         }
         adminPasswordInput = null;
     }
 
     private async Task AdminLogout()
     {
-        SharedState.IsAdmin = false;
-        SharedState.AdminPassword = null;
+        isAdmin = false;
         await JS.InvokeVoidAsync("localStorage.removeItem", "adminPassword");
+        StateHasChanged();
     }
+
+    private static string FormatAge(TimeSpan age)
+    {
+        if (age.TotalDays >= 1) return $"{(int)age.TotalDays}d ago";
+        if (age.TotalHours >= 1) return $"{(int)age.TotalHours}h ago";
+        return $"{(int)age.TotalMinutes}m ago";
+    }
+
+    public void Dispose() => _refreshTimer?.Dispose();
 }

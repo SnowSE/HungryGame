@@ -1,6 +1,5 @@
 using FluentAssertions;
 using HungryGame;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
@@ -33,8 +32,6 @@ namespace HungryTests.StepDefinitions
         {
             if (context.TryGetValue(out GameLogic game) is false)
             {
-                var configMock = new Mock<IConfiguration>();
-                configMock.Setup(m => m["SECRET_CODE"]).Returns(SECRET_CODE);
                 var loggerMock = new Mock<ILogger<GameLogic>>();
                 var randomMock = new Mock<IRandomService>();
                 randomMock.Setup(m => m.Next(It.IsAny<int>())).Returns(() =>
@@ -44,7 +41,7 @@ namespace HungryTests.StepDefinitions
                         lastRandom = 0;
                     return lastRandom;
                 });
-                game = new GameLogic(configMock.Object, loggerMock.Object, randomMock.Object);
+                game = new GameLogic(loggerMock.Object, randomMock.Object);
                 context.Set(game);
             }
             return game;
@@ -75,13 +72,9 @@ namespace HungryTests.StepDefinitions
             var game = getGame();
             try
             {
-                var newGameInfo = new NewGameInfo
-                {
-                    NumRows = rows,
-                    NumColumns = cols,
-                    SecretCode = SECRET_CODE
-                };
-                game.StartGame(newGameInfo);
+                var newGameInfo = new NewGameInfo { NumRows = rows, NumColumns = cols };
+                game.ConfigureGame(newGameInfo);
+                game.StartGame();
                 Assert.Fail("Should never make it here");
             }
             catch (Exception e)
@@ -94,13 +87,8 @@ namespace HungryTests.StepDefinitions
         public void GivenTheGameStarts(int numRows, int numColumns)
         {
             var game = getGame();
-            var newGameInfo = new NewGameInfo
-            {
-                NumRows = numRows,
-                NumColumns = numColumns,
-                SecretCode = SECRET_CODE
-            };
-            game.StartGame(newGameInfo);
+            game.ConfigureGame(new NewGameInfo { NumRows = numRows, NumColumns = numColumns });
+            game.StartGame();
         }
 
         [When(@"(.*) moves (.*) and (.*)")]

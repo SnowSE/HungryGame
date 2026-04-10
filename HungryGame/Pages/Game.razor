@@ -1,0 +1,143 @@
+@page "/game/{Id}"
+@inject GameRegistry Registry
+@inject IConfiguration Config
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<PageTitle>@(instance?.Name ?? "Game Not Found") — Hungry Game</PageTitle>
+
+@if (instance == null)
+{
+    <div class="page-header">
+        <h1 class="game-title">Hungry Game</h1>
+    </div>
+    <div class="error-message">Game not found. <a href="/">Back to Lobby</a></div>
+}
+else
+{
+    <div class="page-header">
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <h1 class="game-title">@instance.Name</h1>
+            <span class="lobby-card-id">@instance.Id</span>
+        </div>
+        <div class="nav-links">
+            <a href="/">Lobby</a>
+            <span style="color:var(--text-muted)">·</span>
+            <a href="help">Help / Docs</a>
+            <span style="color:var(--text-muted)">·</span>
+            <a href="scalar/v1">API Client</a>
+            <span style="color:var(--text-muted)">·</span>
+            <a href="player">Web Player</a>
+            <span style="color:var(--text-muted)">·</span>
+            @if (SharedState.IsAdmin)
+            {
+                <a href="javascript:void(0)" @onclick="AdminLogout">Logout</a>
+            }
+            else
+            {
+                <form style="display:inline-flex;align-items:center;gap:4px;" @onsubmit="AdminLogin">
+                    <input type="password" @bind="adminPasswordInput" placeholder="admin pw"
+                           style="width:90px;padding:2px 6px;font-size:0.8rem;background:#222;border:1px solid #555;color:#eee;border-radius:4px;" />
+                    <button type="submit" style="padding:2px 8px;font-size:0.8rem;background:#333;border:1px solid #555;color:#eee;border-radius:4px;cursor:pointer;">Login</button>
+                </form>
+            }
+        </div>
+    </div>
+
+    <CascadingValue Value="instance.Game">
+        <CascadingValue Value="SharedState">
+            <CurrentGameState />
+
+            <div class="game-layout mt-3">
+                @if (instance.Game.IsGameStarted)
+                {
+                    if (instance.Game.IsGameOver)
+                    {
+                        <div class="game-main">
+                            <ScoreHistoryChart />
+                        </div>
+                        <div class="game-sidebar">
+                            <ResetGame />
+                            <PlayerList />
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="game-main">
+                            <Board />
+                        </div>
+                        <div class="game-sidebar">
+                            <ResetGame />
+                            <PlayerList />
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="game-main">
+                        <AddPlayer />
+                    </div>
+                    <div class="game-sidebar">
+                        <StartGameButton />
+                        <PlayerList />
+                    </div>
+                }
+            </div>
+        </CascadingValue>
+    </CascadingValue>
+}
+
+@code {
+    [Parameter] public string Id { get; set; } = "";
+
+    private GameInstance? instance;
+    private SharedStateClass SharedState { get; set; } = new();
+    private string? adminPasswordInput;
+
+    protected override void OnInitialized()
+    {
+        instance = Registry.GetGame(Id);
+        instance?.Game.GameStateChanged += OnGameStateChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        var saved = await JS.InvokeAsync<string?>("localStorage.getItem", "adminPassword");
+        if (saved != null && saved == Config["SECRET_CODE"])
+        {
+            SharedState.IsAdmin = true;
+            SharedState.AdminPassword = saved;
+        }
+        var userToken = await JS.InvokeAsync<string?>("localStorage.getItem", "userToken");
+        if (instance != null && userToken == instance.CreatorToken)
+        {
+            SharedState.UserToken = userToken;
+            SharedState.IsCreator = true;
+        }
+        StateHasChanged();
+    }
+
+    private void OnGameStateChanged(object? sender, EventArgs e) =>
+        InvokeAsync(StateHasChanged);
+
+    private async Task AdminLogin()
+    {
+        if (adminPasswordInput == Config["SECRET_CODE"])
+        {
+            SharedState.IsAdmin = true;
+            SharedState.AdminPassword = adminPasswordInput;
+            await JS.InvokeVoidAsync("localStorage.setItem", "adminPassword", adminPasswordInput);
+            StateHasChanged();
+        }
+        adminPasswordInput = null;
+    }
+
+    private async Task AdminLogout()
+    {
+        SharedState.IsAdmin = false;
+        SharedState.AdminPassword = null;
+        await JS.InvokeVoidAsync("localStorage.removeItem", "adminPassword");
+        StateHasChanged();
+    }
+}

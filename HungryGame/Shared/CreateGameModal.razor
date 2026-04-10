@@ -1,0 +1,122 @@
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+@if (IsVisible)
+{
+    <div class="modal-overlay" @onclick="Close">
+        <div class="modal-box" @onclick:stopPropagation="true">
+            <button class="modal-close" @onclick="Close">&times;</button>
+            <div class="modal-title">Create Game</div>
+
+            <EditForm Model="@model" OnValidSubmit="HandleSubmit">
+                <div class="modal-field">
+                    <label>Game Name</label>
+                    <InputText @bind-Value="model.Name" placeholder="e.g. Friday Night Showdown"
+                               class="form-control" maxlength="60" />
+                </div>
+
+                <div class="modal-row">
+                    <div class="modal-field">
+                        <label>Rows (max @MaxRows)</label>
+                        <InputNumber @bind-Value="model.NumRows" class="form-control"
+                                     min="2" max="@MaxRows" />
+                    </div>
+                    <div class="modal-field">
+                        <label>Cols (max @MaxCols)</label>
+                        <InputNumber @bind-Value="model.NumCols" class="form-control"
+                                     min="2" max="@MaxCols" />
+                    </div>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                    <InputCheckbox @bind-Value="model.IsTimed" id="isTimed" class="form-check-input" />
+                    <label class="form-label" for="isTimed" style="text-transform:none;font-size:0.9rem;margin:0;">Timed Game</label>
+                </div>
+
+                @if (model.IsTimed)
+                {
+                    <div class="modal-field">
+                        <label>Time Limit (minutes)</label>
+                        <InputNumber @bind-Value="model.TimeLimitMinutes" class="form-control" min="1" max="60" />
+                    </div>
+                }
+
+                @if (errorMessage != null)
+                {
+                    <div class="error-message" style="margin-bottom:12px;">@errorMessage</div>
+                }
+
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">Create &amp; Go</button>
+                    <button type="button" class="btn btn-secondary" @onclick="Close">Cancel</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public bool IsAdmin { get; set; }
+
+    private int MaxRows => IsAdmin ? 9999 : 100;
+    private int MaxCols => IsAdmin ? 9999 : 150;
+
+    private CreateGameModel model = new();
+    private string? errorMessage;
+
+    private class CreateGameModel
+    {
+        public string Name { get; set; } = "";
+        public int NumRows { get; set; } = 20;
+        public int NumCols { get; set; } = 30;
+        public bool IsTimed { get; set; }
+        public int? TimeLimitMinutes { get; set; }
+    }
+
+    private async Task HandleSubmit()
+    {
+        errorMessage = null;
+        var userToken = await JS.InvokeAsync<string?>("localStorage.getItem", "userToken");
+        if (string.IsNullOrWhiteSpace(userToken))
+        {
+            userToken = Guid.NewGuid().ToString();
+            await JS.InvokeVoidAsync("localStorage.setItem", "userToken", userToken);
+        }
+
+        var req = new CreateGameRequest(
+            model.Name.Trim(),
+            model.NumRows,
+            model.NumCols,
+            userToken,
+            model.IsTimed,
+            model.IsTimed ? model.TimeLimitMinutes : null,
+            null
+        );
+
+        using var http = new HttpClient();
+        var baseUri = Nav.BaseUri.TrimEnd('/');
+        var response = await http.PostAsJsonAsync($"{baseUri}/games", req);
+        if (!response.IsSuccessStatusCode)
+        {
+            errorMessage = await response.Content.ReadAsStringAsync();
+            return;
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<GameCreatedResponse>();
+        if (result != null)
+        {
+            Nav.NavigateTo($"/game/{result.Id}");
+        }
+    }
+
+    private async Task Close()
+    {
+        model = new();
+        errorMessage = null;
+        await OnClose.InvokeAsync();
+    }
+
+    private record GameCreatedResponse(string Id, string Name);
+}

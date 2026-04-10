@@ -8,6 +8,7 @@ public abstract class BasePlayerLogic : IPlayerLogic
     protected HttpClient httpClient = new();
     protected string url = "";
     protected string? token;
+    protected string _gameId = "";
     protected readonly IConfiguration config;
 
     protected BasePlayerLogic(IConfiguration config)
@@ -20,7 +21,10 @@ public abstract class BasePlayerLogic : IPlayerLogic
     public virtual async Task JoinGameAsync()
     {
         url = config["SERVER"] ?? "https://hungrygame.azurewebsites.net";
-        token = await httpClient.GetStringAsync($"{url}/join?playerName={PlayerName}");
+        var gameId = config["GAME_ID"] ?? throw new InvalidOperationException(
+            "GAME_ID environment variable is required. Set it to the ID of the game to join.");
+        token = await httpClient.GetStringAsync($"{url}/game/{gameId}/join?playerName={PlayerName}");
+        _gameId = gameId;
     }
 
     public abstract Task PlayAsync(CancellationTokenSource cancellationTokenSource);
@@ -28,7 +32,7 @@ public abstract class BasePlayerLogic : IPlayerLogic
 
     protected async Task<bool> checkIfGameOver()
     {
-        return (await httpClient.GetStringAsync($"{url}/state")) == "GameOver";
+        return (await httpClient.GetStringAsync($"{url}/game/{_gameId}/state")) == "GameOver";
     }
 
     protected virtual string turn(string direction) => direction switch
@@ -153,17 +157,17 @@ public abstract class BasePlayerLogic : IPlayerLogic
     }
     protected async Task waitForGameToStart(CancellationToken cancellationToken)
     {
-        var gameState = await httpClient.GetStringAsync($"{url}/state");
+        var gameState = await httpClient.GetStringAsync($"{url}/game/{_gameId}/state");
         while (gameState == "Joining" || gameState == "GameOver")
         {
             await Task.Delay(2_000, cancellationToken);
-            gameState = await httpClient.GetStringAsync($"{url}/state", cancellationToken);
+            gameState = await httpClient.GetStringAsync($"{url}/game/{_gameId}/state", cancellationToken);
         }
     }
 
     protected async Task<List<Cell>> getBoardAsync()
     {
-        var boardString = await httpClient.GetStringAsync($"{url}/board");
+        var boardString = await httpClient.GetStringAsync($"{url}/game/{_gameId}/board");
         return JsonSerializer.Deserialize<IEnumerable<Cell>>(boardString)?.ToList() ?? throw new MissingBoardException();
     }
 }

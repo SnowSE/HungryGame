@@ -1,5 +1,4 @@
 @* HungryGame/Shared/ScoreHistoryChart.razor *@
-@inject GameLogic gameInfo
 @inject IJSRuntime JS
 
 <div style="width:100%;height:calc(100vh - 160px);min-height:400px">
@@ -7,6 +6,9 @@
 </div>
 
 @code {
+    [CascadingParameter]
+    public GameLogic gameInfo { get; set; } = default!;
+
     // The 10 neon colors, matching PlayerList.razor's PlayerColors array exactly.
     // If PlayerList.razor's array changes, update this one too.
     private static readonly string[] PlayerColors =

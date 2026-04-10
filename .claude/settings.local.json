@@ -7,7 +7,8 @@
       "Bash(findstr:*)",
       "Bash(dotnet tool install:*)",
       "Bash(ilspycmd:*)",
-      "Bash(dotnet remove:*)"
+      "Bash(dotnet remove:*)",
+      "Bash(ls /c/Users/jonathan.allen/code/hungrygame/HungryGame/*.cs)"
     ]
   }
 }

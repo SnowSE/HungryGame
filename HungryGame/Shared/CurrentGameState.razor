@@ -1,4 +1,3 @@
-@inject GameLogic gameInfo
 @implements IDisposable
 
 @{
@@ -27,6 +26,9 @@
 </div>
 
 @code {
+    [CascadingParameter]
+    public GameLogic gameInfo { get; set; } = default!;
+
     [CascadingParameter]
     public SharedStateClass SharedState { get; set; } = default!;
     private System.Timers.Timer timer = null!;

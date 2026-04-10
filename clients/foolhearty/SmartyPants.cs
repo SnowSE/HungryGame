@@ -106,13 +106,13 @@ public class SmartyPants : BasePlayerLogic
             }
 
             direction = inferDirection(moveResult?.newLocation, destination);
-            moveResult = await ExecuteWithRetry(() => httpClient.GetFromJsonAsync<MoveResult>($"{url}/move/{direction}?token={token}"));
+            moveResult = await ExecuteWithRetry(() => httpClient.GetFromJsonAsync<MoveResult>($"{url}/game/{_gameId}/move/{direction}?token={token}"));
 
             while (moveResult?.newLocation == lastLocation && !cancellationTokenSource.IsCancellationRequested)//didn't move
             {
                 logger.LogInformation($"Didn't move when I went {direction}, trying to go {tryNextDirection(direction)}");
                 direction = tryNextDirection(direction);
-                moveResult = await ExecuteWithRetry(() => httpClient.GetFromJsonAsync<MoveResult>($"{url}/move/{direction}?token={token}"));
+                moveResult = await ExecuteWithRetry(() => httpClient.GetFromJsonAsync<MoveResult>($"{url}/game/{_gameId}/move/{direction}?token={token}"));
             }
 
             if (moveResult?.ateAPill == false)
@@ -128,7 +128,7 @@ public class SmartyPants : BasePlayerLogic
             while (map.ContainsKey(nextLocation) && map[nextLocation].isPillAvailable)
             {
                 logger.LogInformation("In a groove!  Keep going!");
-                lastRequest = ExecuteWithRetry(() => httpClient.GetFromJsonAsync<MoveResult>($"{url}/move/{direction}?token={token}"));
+                lastRequest = ExecuteWithRetry(() => httpClient.GetFromJsonAsync<MoveResult>($"{url}/game/{_gameId}/move/{direction}?token={token}"));
                 nextLocation = advance(nextLocation, direction);
             }
             if (lastRequest != null)
@@ -186,10 +186,10 @@ public class SmartyPants : BasePlayerLogic
             Interlocked.Exchange(ref board, newBoard);
             Interlocked.Exchange(ref map, newMap);
 
-            var newPlayers = await ExecuteWithRetry(() => httpClient.GetFromJsonAsync<IEnumerable<PlayerInfo>>($"{url}/players"));
+            var newPlayers = await ExecuteWithRetry(() => httpClient.GetFromJsonAsync<IEnumerable<PlayerInfo>>($"{url}/game/{_gameId}/players"));
             Interlocked.Exchange(ref players, newPlayers);
 
-            var newGameState = await ExecuteWithRetry(() => httpClient.GetStringAsync($"{url}/state"));
+            var newGameState = await ExecuteWithRetry(() => httpClient.GetStringAsync($"{url}/game/{_gameId}/state"));
             Interlocked.Exchange(ref gameState, newGameState);
             logger.LogInformation("UPDATED BOARD");
         }
@@ -208,13 +208,13 @@ public class SmartyPants : BasePlayerLogic
         Task<MoveResult> result = null;
         for (int i = 0; i < Math.Abs(rowDelta); i++)
         {
-            result = ExecuteWithRetry(() => httpClient.GetFromJsonAsync<MoveResult>($"{url}/move/{direction}?token={token}"));
+            result = ExecuteWithRetry(() => httpClient.GetFromJsonAsync<MoveResult>($"{url}/game/{_gameId}/move/{direction}?token={token}"));
         }
 
         direction = colDelta < 0 ? "left" : "right";
         for (int i = 0; i < Math.Abs(colDelta); i++)
         {
-            result = ExecuteWithRetry(() => httpClient.GetFromJsonAsync<MoveResult>($"{url}/move/{direction}?token={token}"));
+            result = ExecuteWithRetry(() => httpClient.GetFromJsonAsync<MoveResult>($"{url}/game/{_gameId}/move/{direction}?token={token}"));
         }
 
         if (result != null)

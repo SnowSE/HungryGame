@@ -1,9 +1,6 @@
 using HungryGame;
-using System.ComponentModel;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.Extensions.Caching.Memory;
 using Prometheus;
 using Scalar.AspNetCore;
 using Serilog;
@@ -35,8 +32,11 @@ builder.Services.AddRateLimiter(options =>
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
-builder.Services.AddSingleton<GameLogic>();
 builder.Services.AddSingleton<IRandomService, SystemRandomService>();
+builder.Services.AddSingleton<AdminTokenService>();
+builder.Services.AddSingleton<IGameIdStrategy, ShortRandomIdStrategy>();
+builder.Services.AddSingleton<GameRegistry>();
+builder.Services.AddHostedService<GameCleanupService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddCors();
 builder.Services.AddOpenApi();
@@ -103,92 +103,151 @@ app.MapScalarApiReference(options =>
 
 app.MapFallbackToPage("/_Host");
 
-//API endpoints
-app.MapGet("join", (
-        [Description("Your player name.")] string? userName,
-        [Description("Legacy alias for userName.")] string? playerName,
-        GameLogic gameLogic) =>
-    {
-        var name = userName ?? playerName ?? throw new ArgumentNullException(nameof(userName), "Must define either a userName or playerName in the query string.");
-        return gameLogic.JoinPlayer(name);
-    })
-    .RequireRateLimiting("fixed")
-    .WithSummary("Join the game")
-    .WithDescription("Supply either **userName** or **playerName** — they are equivalent. Returns a token required for all subsequent move requests.");
-app.MapGet("move/left", (string token, GameLogic gameLogic) => gameLogic.Move(token, Direction.Left)).RequireRateLimiting("fixed");
-app.MapGet("move/right", (string token, GameLogic gameLogic) => gameLogic.Move(token, Direction.Right)).RequireRateLimiting("fixed");
-app.MapGet("move/up", (string token, GameLogic gameLogic) => gameLogic.Move(token, Direction.Up)).RequireRateLimiting("fixed");
-app.MapGet("move/down", (string token, GameLogic gameLogic) => gameLogic.Move(token, Direction.Down)).RequireRateLimiting("fixed");
-app.MapGet("players", ([FromServices] GameLogic gameLogic, IMemoryCache memoryCache) =>
+// Helper local functions
+static GameInstance? ResolveGame(string id, GameRegistry registry) =>
+    registry.GetGame(id);
+
+static bool IsAuthorized(GameInstance instance, string? creatorToken, AdminTokenService adminTokens, string? adminToken) =>
+    adminTokens.IsValid(adminToken) || instance.CreatorToken == creatorToken;
+
+// Lobby endpoints
+app.MapGet("games", (GameRegistry registry) =>
 {
-    return memoryCache.GetOrCreate("players", cacheEntry =>
+    return registry.AllGames().Select(i => new
     {
-        cacheEntry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMilliseconds(100);
-        return gameLogic.GetPlayersByScoreDescending().Select(p => new { p.Name, p.Id, p.Score });
+        i.Id,
+        i.Name,
+        State = i.Game.CurrentGameState.ToString(),
+        PlayerCount = i.Game.GetPlayersByScoreDescending().Count(),
+        i.Game.MaxRows,
+        i.Game.MaxCols,
+        i.CreatedAt,
+        i.CompletedAt,
+        WinnerName = i.Game.IsGameOver
+            ? i.Game.GetPlayersByGameOverRank().FirstOrDefault()?.Name
+            : null
     });
-
-});
-app.MapGet("start", (int numRows, int numCols, string? password, string? adminToken, int? timeLimit, GameLogic gameLogic) =>
-{
-    var gameStart = new NewGameInfo
-    {
-        NumColumns = numCols,
-        NumRows = numRows,
-        SecretCode = password ?? "",
-        AdminToken = adminToken,
-        IsTimed = timeLimit.HasValue,
-        TimeLimitInMinutes = timeLimit,
-    };
-    gameLogic.StartGame(gameStart);
 }).RequireRateLimiting("fixed");
-app.MapGet("reset", (string? password, string? adminToken, GameLogic gameLogic) => gameLogic.ResetGame(password ?? "", adminToken)).RequireRateLimiting("fixed");
 
-// Admin endpoints
-app.MapPost("admin/login", (string password, GameLogic gameLogic) =>
+app.MapPost("games", (CreateGameRequest req, GameRegistry registry, AdminTokenService adminTokens) =>
 {
-    var token = gameLogic.AdminLogin(password);
-    if (token == null)
+    bool isAdmin = adminTokens.IsValid(req.AdminToken);
+    const int MaxUserRows = 100;
+    const int MaxUserCols = 150;
+
+    if (!isAdmin && (req.NumRows > MaxUserRows || req.NumCols > MaxUserCols))
+        return Results.BadRequest($"Board size capped at {MaxUserRows}x{MaxUserCols} for user-created games.");
+
+    if (string.IsNullOrWhiteSpace(req.Name))
+        return Results.BadRequest("Game name is required.");
+
+    var instance = registry.CreateGame(
+        req.Name.Trim(),
+        req.CreatorToken,
+        req.NumRows,
+        req.NumCols,
+        req.IsTimed,
+        req.TimeLimitMinutes);
+
+    return Results.Ok(new { instance.Id, instance.Name });
+}).RequireRateLimiting("fixed");
+
+// Game-scoped endpoints
+app.MapGet("game/{id}/join", (string id, string? userName, string? playerName, GameRegistry registry) =>
+{
+    var instance = ResolveGame(id, registry);
+    if (instance == null) return Results.NotFound();
+    var name = userName ?? playerName ?? throw new ArgumentNullException("userName");
+    return Results.Ok(instance.Game.JoinPlayer(name));
+}).RequireRateLimiting("fixed");
+
+app.MapGet("game/{id}/move/{dir}", (string id, string dir, string token, GameRegistry registry) =>
+{
+    var instance = ResolveGame(id, registry);
+    if (instance == null) return Results.NotFound();
+    if (!Enum.TryParse<Direction>(dir, ignoreCase: true, out var direction))
+        return Results.BadRequest("Unknown direction");
+    return Results.Ok(instance.Game.Move(token, direction));
+}).RequireRateLimiting("fixed");
+
+app.MapGet("game/{id}/board", (string id, GameRegistry registry) =>
+{
+    var instance = ResolveGame(id, registry);
+    if (instance == null) return Results.NotFound();
+    return Results.Ok(instance.Game.GetBoardState());
+}).RequireRateLimiting("fixed");
+
+app.MapGet("game/{id}/players", (string id, GameRegistry registry) =>
+{
+    var instance = ResolveGame(id, registry);
+    if (instance == null) return Results.NotFound();
+    return Results.Ok(instance.Game.GetPlayersByScoreDescending()
+        .Select(p => new { p.Name, p.Id, p.Score }));
+}).RequireRateLimiting("fixed");
+
+app.MapGet("game/{id}/state", (string id, GameRegistry registry) =>
+{
+    var instance = ResolveGame(id, registry);
+    if (instance == null) return Results.NotFound();
+    return Results.Ok(instance.Game.CurrentGameState.ToString());
+}).RequireRateLimiting("fixed");
+
+app.MapGet("game/{id}/start", (string id, string? creatorToken, string? adminToken,
+    GameRegistry registry, AdminTokenService adminTokens) =>
+{
+    var instance = ResolveGame(id, registry);
+    if (instance == null) return Results.NotFound();
+    if (!IsAuthorized(instance, creatorToken, adminTokens, adminToken))
         return Results.Unauthorized();
+    instance.Game.StartGame();
+    return Results.Ok();
+}).RequireRateLimiting("fixed");
+
+app.MapGet("game/{id}/reset", (string id, string? creatorToken, string? adminToken,
+    GameRegistry registry, AdminTokenService adminTokens) =>
+{
+    var instance = ResolveGame(id, registry);
+    if (instance == null) return Results.NotFound();
+    if (!IsAuthorized(instance, creatorToken, adminTokens, adminToken))
+        return Results.Unauthorized();
+    instance.Game.ResetGame();
+    return Results.Ok();
+}).RequireRateLimiting("fixed");
+
+app.MapPost("game/{id}/admin/boot", (string id, BootRequest req,
+    GameRegistry registry, AdminTokenService adminTokens) =>
+{
+    var instance = ResolveGame(id, registry);
+    if (instance == null) return Results.NotFound();
+    if (!IsAuthorized(instance, req.CreatorToken, adminTokens, req.AdminToken))
+        return Results.Unauthorized();
+    instance.Game.BootPlayer(req.PlayerId);
+    return Results.Ok();
+}).RequireRateLimiting("fixed");
+
+app.MapPost("game/{id}/admin/clear-players", (string id, AuthRequest req,
+    GameRegistry registry, AdminTokenService adminTokens) =>
+{
+    var instance = ResolveGame(id, registry);
+    if (instance == null) return Results.NotFound();
+    if (!IsAuthorized(instance, req.CreatorToken, adminTokens, req.AdminToken))
+        return Results.Unauthorized();
+    instance.Game.ClearAllPlayers();
+    return Results.Ok();
+}).RequireRateLimiting("fixed");
+
+// Global admin auth
+app.MapPost("admin/login", (AdminLoginRequest req, AdminTokenService adminTokens) =>
+{
+    var token = adminTokens.Login(req.Password);
+    if (token == null) return Results.Unauthorized();
     return Results.Ok(token);
 }).RequireRateLimiting("fixed");
 
-app.MapPost("admin/logout", (string adminToken, GameLogic gameLogic) =>
+app.MapPost("admin/logout", (AdminLogoutRequest req, AdminTokenService adminTokens) =>
 {
-    gameLogic.AdminLogout(adminToken);
+    adminTokens.Logout(req.AdminToken);
     return Results.Ok();
 }).RequireRateLimiting("fixed");
-
-app.MapPost("admin/boot", (string adminToken, int playerId, GameLogic gameLogic) =>
-{
-    if (!gameLogic.IsValidAdminToken(adminToken))
-        return Results.Unauthorized();
-    gameLogic.BootPlayer(adminToken, playerId);
-    return Results.Ok();
-}).RequireRateLimiting("fixed");
-
-app.MapPost("admin/clear-players", (string adminToken, GameLogic gameLogic) =>
-{
-    if (!gameLogic.IsValidAdminToken(adminToken))
-        return Results.Unauthorized();
-    gameLogic.ClearAllPlayers(adminToken);
-    return Results.Ok();
-}).RequireRateLimiting("fixed");
-app.MapGet("board", ([FromServices] GameLogic gameLogic, IMemoryCache memoryCache) =>
-{
-    return memoryCache.GetOrCreate("board",
-        cacheEntry =>
-        {
-            cacheEntry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMilliseconds(100);
-            return gameLogic.GetBoardState();
-        });
-});
-app.MapGet("state", ([FromServices] GameLogic gameLogic, IMemoryCache memoryCache) =>
-{
-    return memoryCache.GetOrCreate("state", cacheEntry =>
-   {
-       cacheEntry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMilliseconds(100);
-       return gameLogic.CurrentGameState.ToString();
-   });
-});
 
 app.Run();

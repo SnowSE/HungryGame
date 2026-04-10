@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
 using HungryGame;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
@@ -16,12 +15,10 @@ public class ScoreHistoryTests
 
     private static GameLogic MakeGame()
     {
-        var config = new Mock<IConfiguration>();
-        config.Setup(c => c["SECRET_CODE"]).Returns("secret");
         var logger = new Mock<ILogger<GameLogic>>();
         var random = new Mock<IRandomService>();
         random.Setup(r => r.Next(It.IsAny<int>())).Returns(0);
-        return new GameLogic(config.Object, logger.Object, random.Object);
+        return new GameLogic(logger.Object, random.Object);
     }
 
     // ── Task 1: initial state ───────────────────────────────────────────────
@@ -52,8 +49,6 @@ public class ScoreHistoryTests
     // Pills fill all other cells: values 1,2,3,4 in order of eating.
     private static (GameLogic game, string token1, string token2) MakeTwoPlayerGame()
     {
-        var config = new Mock<IConfiguration>();
-        config.Setup(c => c["SECRET_CODE"]).Returns("secret");
         var logger = new Mock<ILogger<GameLogic>>();
         var random = new Mock<IRandomService>();
 
@@ -65,17 +60,11 @@ public class ScoreHistoryTests
         random.Setup(r => r.Next(3)).Returns(() => rowValues.Dequeue());
         random.Setup(r => r.Next(2)).Returns(() => colValues.Dequeue());
 
-        var game = new GameLogic(config.Object, logger.Object, random.Object);
+        var game = new GameLogic(logger.Object, random.Object);
         var token1 = game.JoinPlayer("Alice");
         var token2 = game.JoinPlayer("Bob");
-        game.StartGame(new NewGameInfo
-        {
-            NumRows = 3,
-            NumColumns = 2,
-            SecretCode = "secret",
-            CellIcon = "💊",
-            UseCustomEmoji = false,
-        });
+        game.ConfigureGame(new NewGameInfo { NumRows = 3, NumColumns = 2 });
+        game.StartGame();
         return (game, token1, token2);
     }
 
@@ -164,7 +153,7 @@ public class ScoreHistoryTests
         game.BattleStartedAt.Should().NotBeNull("battle should have started");
 
         // Now reset — this calls resetGame() which should clear the fields
-        game.ResetGame("secret");
+        game.ResetGame();
 
         game.ScoreHistory.Should().BeEmpty();
         game.BattleStartedAt.Should().BeNull();

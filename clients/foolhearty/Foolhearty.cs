@@ -19,6 +19,8 @@ public class Foolhearty : BasePlayerLogic
 
     public override async Task JoinGameAsync()
     {
+        _gameId = config["GAME_ID"] ?? throw new InvalidOperationException(
+            "GAME_ID environment variable is required. Set it to the ID of the game to join.");
         string fileName = $"connectionInfo_{PlayerName}.txt";
         if (File.Exists(fileName))
         {
@@ -47,7 +49,7 @@ public class Foolhearty : BasePlayerLogic
                 var destination = acquireTarget(currentLocation, board);
                 var direction = inferDirection(currentLocation, destination);
             MOVE:
-                var moveResultString = await httpClient.GetStringAsync($"{url}/move/{direction}?token={token}");
+                var moveResultString = await httpClient.GetStringAsync($"{url}/game/{_gameId}/move/{direction}?token={token}");
                 var moveResultJson = JsonDocument.Parse(moveResultString).RootElement;
                 var currentRow = moveResultJson.GetProperty("newLocation").GetProperty("row").GetInt32();
                 var currentCol = moveResultJson.GetProperty("newLocation").GetProperty("column").GetInt32();

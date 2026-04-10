@@ -1,4 +1,3 @@
-@inject GameLogic gameInfo
 
 <style>
     .leaderboard-controls {
@@ -138,7 +137,7 @@
                             <td>
                                 <span class="player-id-badge" style="@GetPlayerBadgeStyle(p.Id)">@p.Id</span>
                                 &nbsp;@p.Name
-                                @if (SharedState?.IsAdmin == true)
+                                @if (SharedState?.CanManage == true)
                                 {
                                     <button class="boot-btn" @onclick="() => BootPlayer(p.Id)" title="Boot player">X</button>
                                 }
@@ -161,7 +160,7 @@
                 </tbody>
             </table>
         </div>
-        @if (SharedState?.IsAdmin == true)
+        @if (SharedState?.CanManage == true)
         {
             <button class="clear-all-btn" @onclick="ClearAllPlayers">Clear All Players</button>
         }
@@ -171,7 +170,9 @@
 @code {
     public enum ViewMode { Full, Top5, Collapsed }
     private ViewMode viewMode = ViewMode.Full;
-    private string? adminToken;
+
+    [CascadingParameter]
+    public GameLogic gameInfo { get; set; } = default!;
 
     [CascadingParameter]
     public SharedStateClass SharedState { get; set; } = default!;
@@ -187,26 +188,16 @@
         gameInfo.GameStateChanged += (_, _) => InvokeAsync(() => StateHasChanged());
     }
 
-    private void EnsureAdminToken()
-    {
-        if (adminToken == null && SharedState?.IsAdmin == true)
-        {
-            adminToken = gameInfo.AdminLogin(SharedState.AdminPassword!);
-        }
-    }
-
     private void BootPlayer(int playerId)
     {
-        EnsureAdminToken();
-        if (adminToken != null)
-            gameInfo.BootPlayer(adminToken, playerId);
+        if (SharedState.CanManage)
+            gameInfo.BootPlayer(playerId);
     }
 
     private void ClearAllPlayers()
     {
-        EnsureAdminToken();
-        if (adminToken != null)
-            gameInfo.ClearAllPlayers(adminToken);
+        if (SharedState.CanManage)
+            gameInfo.ClearAllPlayers();
     }
 
     private static readonly string[] PlayerColors = {

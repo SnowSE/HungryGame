@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lobby Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;600&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-dark: #0a0a1a;
+  --bg-surface: #1a1a2e;
+  --bg-card: #16213e;
+  --bg-card-hover: #1c2a4a;
+  --neon-green: #00ff88;
+  --neon-pink: #ff006e;
+  --neon-cyan: #00b4d8;
+  --neon-yellow: #ffd60a;
+  --neon-orange: #ff8c00;
+  --neon-purple: #b388ff;
+  --battle-red: #ff4444;
+  --text-primary: #e8e8e8;
+  --text-secondary: #a0a0b8;
+  --text-muted: #6c6c80;
+  --border-subtle: rgba(255,255,255,0.06);
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --font-display: 'Orbitron', sans-serif;
+  --font-body: 'Rajdhani', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  font-family: var(--font-body);
+  font-weight: 500;
+  background-color: var(--bg-dark);
+  color: var(--text-primary);
+  font-size: 16px;
+  min-height: 100vh;
+}
+body {
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(0,180,216,0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(255,0,110,0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(0,255,136,0.03) 0%, transparent 50%);
+}
+body::before {
+  content: '';
+  position: fixed; top:0; left:0; width:100%; height:100%;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none; z-index: 0;
+}
+.page { position: relative; z-index: 1; padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
+
+/* Header */
+.page-header {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 16px; margin-bottom: 32px;
+  padding-bottom: 16px; border-bottom: 1px solid var(--border-subtle);
+}
+.game-title {
+  font-family: var(--font-display); font-weight: 900; font-size: 2.2rem;
+  background: linear-gradient(135deg, var(--neon-green), var(--neon-cyan));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; letter-spacing: 3px; text-transform: uppercase;
+  position: relative; display: inline-block;
+}
+.game-title::after {
+  content: ''; position: absolute; bottom: -4px; left: 0; width: 100%; height: 2px;
+  background: linear-gradient(90deg, var(--neon-green), var(--neon-cyan), transparent);
+}
+.nav-links { display: flex; align-items: center; gap: 16px; font-size: 0.85rem; flex-wrap: wrap; }
+.nav-links a { color: var(--neon-cyan); text-decoration: none; transition: color 0.2s; }
+.nav-links a:hover { color: var(--neon-green); }
+.nav-links a.active { color: var(--neon-green); font-weight: 600; }
+.nav-sep { color: var(--text-muted); }
+.admin-form { display: inline-flex; align-items: center; gap: 6px; }
+.admin-form input {
+  width: 90px; padding: 3px 8px; font-size: 0.8rem;
+  background: #222; border: 1px solid #555; color: #eee; border-radius: 4px;
+  font-family: var(--font-body);
+}
+.admin-form button {
+  padding: 3px 10px; font-size: 0.8rem; background: #333;
+  border: 1px solid #555; color: #eee; border-radius: 4px; cursor: pointer;
+  font-family: var(--font-body);
+}
+
+/* Section heading */
+.section-heading {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+}
+.section-heading h2 {
+  font-family: var(--font-display); font-size: 0.8rem; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+}
+.section-heading .count {
+  font-family: var(--font-display); font-size: 0.7rem; font-weight: 700;
+  padding: 2px 8px; border-radius: 100px; letter-spacing: 1px;
+}
+.dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+
+.section-join .section-heading h2 { color: var(--neon-cyan); }
+.section-join .dot { background: var(--neon-cyan); box-shadow: 0 0 6px var(--neon-cyan); }
+.section-join .count { background: rgba(0,180,216,0.12); color: var(--neon-cyan); border: 1px solid rgba(0,180,216,0.25); }
+
+.section-progress .section-heading h2 { color: var(--neon-green); }
+.section-progress .dot { background: var(--neon-green); box-shadow: 0 0 6px var(--neon-green); animation: pulse-dot 2s ease-in-out infinite; }
+.section-progress .count { background: rgba(0,255,136,0.1); color: var(--neon-green); border: 1px solid rgba(0,255,136,0.2); }
+
+.section-completed .section-heading h2 { color: var(--text-muted); }
+.section-completed .dot { background: var(--text-muted); }
+.section-completed .count { background: rgba(108,108,128,0.15); color: var(--text-secondary); border: 1px solid rgba(108,108,128,0.2); }
+
+.section { margin-bottom: 36px; }
+
+/* Card grid - flows with width */
+.card-grid {
+  display: flex; flex-wrap: wrap; gap: 14px;
+}
+
+/* Game card */
+.game-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+  padding: 16px 18px;
+  position: relative; overflow: hidden;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+  width: 220px;
+  flex-shrink: 0;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.game-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+}
+.section-join .game-card::before { background: linear-gradient(90deg, var(--neon-cyan), var(--neon-green)); }
+.section-progress .game-card::before { background: linear-gradient(90deg, var(--neon-green), var(--neon-cyan), var(--neon-pink)); }
+.section-completed .game-card::before { background: linear-gradient(90deg, var(--text-muted), transparent); }
+
+.section-join .game-card:hover {
+  background: var(--bg-card-hover); border-color: rgba(0,180,216,0.3);
+  box-shadow: 0 0 20px rgba(0,180,216,0.12), 0 4px 24px rgba(0,0,0,0.4);
+  transform: translateY(-2px);
+}
+.section-progress .game-card:hover {
+  background: var(--bg-card-hover); border-color: rgba(0,255,136,0.2);
+  transform: translateY(-2px);
+}
+.section-completed .game-card { cursor: default; opacity: 0.85; }
+.section-completed .game-card:hover { opacity: 1; background: var(--bg-card-hover); }
+
+.card-name {
+  font-family: var(--font-display); font-size: 0.8rem; font-weight: 700;
+  color: var(--text-primary); letter-spacing: 0.5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.section-completed .card-name { color: var(--text-secondary); }
+
+.card-id {
+  font-family: 'Press Start 2P', monospace; font-size: 0.6rem;
+  color: var(--neon-cyan); letter-spacing: 2px;
+  background: rgba(0,180,216,0.1);
+  border: 1px solid rgba(0,180,216,0.25);
+  border-radius: 4px;
+  padding: 3px 8px;
+  display: inline-block;
+  width: fit-content;
+}
+.section-completed .card-id {
+  color: var(--text-muted);
+  background: rgba(108,108,128,0.1);
+  border-color: rgba(108,108,128,0.2);
+}
+
+.card-meta {
+  display: flex; flex-direction: column; gap: 4px; margin-top: 2px;
+}
+.card-meta-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.card-label {
+  font-family: var(--font-display); font-size: 0.6rem; font-weight: 600;
+  letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted);
+}
+.card-value {
+  font-family: var(--font-display); font-size: 0.7rem; font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.state-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-display); font-size: 0.6rem; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 100px;
+  margin-top: 2px; width: fit-content;
+}
+.state-joining { color: var(--neon-cyan); background: rgba(0,180,216,0.1); border: 1px solid rgba(0,180,216,0.2); }
+.state-eating { color: var(--neon-green); background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.2); }
+.state-battle { color: var(--battle-red); background: rgba(255,68,68,0.08); border: 1px solid rgba(255,68,68,0.25); }
+.state-gameover { color: var(--text-muted); background: rgba(108,108,128,0.1); border: 1px solid rgba(108,108,128,0.15); }
+
+.card-winner {
+  font-family: var(--font-display); font-size: 0.65rem; font-weight: 700;
+  color: var(--neon-yellow); margin-top: 2px;
+}
+.card-winner .label { color: var(--text-muted); font-weight: 600; }
+
+.card-divider {
+  height: 1px; background: var(--border-subtle); margin: 2px 0;
+}
+
+/* Create button */
+.create-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-display); font-weight: 700; font-size: 0.75rem;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--bg-dark);
+  background: linear-gradient(135deg, var(--neon-green), #00cc6a);
+  border: none; border-radius: var(--radius-sm);
+  padding: 10px 20px;
+  box-shadow: 0 0 20px rgba(0,255,136,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+  cursor: pointer; transition: all 0.25s ease;
+  text-decoration: none;
+}
+.create-btn:hover {
+  box-shadow: 0 0 30px rgba(0,255,136,0.5), 0 0 60px rgba(0,255,136,0.2);
+  transform: translateY(-1px);
+}
+
+/* Lobby top bar */
+.lobby-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px; margin-bottom: 28px;
+}
+.lobby-tagline {
+  color: var(--text-secondary); font-size: 0.9rem;
+}
+
+@keyframes pulse-dot {
+  0%,100% { box-shadow: 0 0 4px var(--neon-green); }
+  50% { box-shadow: 0 0 10px var(--neon-green); }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Page header -->
+  <div class="page-header">
+    <h1 class="game-title">Hungry Game</h1>
+    <div class="nav-links">
+      <a href="#" class="active">Lobby</a>
+      <span class="nav-sep">·</span>
+      <a href="#">Help / Docs</a>
+      <span class="nav-sep">·</span>
+      <a href="#">API Client</a>
+      <span class="nav-sep">·</span>
+      <a href="#">Web Player</a>
+      <span class="nav-sep">·</span>
+      <div class="admin-form">
+        <input type="password" placeholder="admin pw">
+        <button>Login</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lobby top bar -->
+  <div class="lobby-topbar">
+    <span class="lobby-tagline">Pick a game to watch or join, or create your own.</span>
+    <a href="#" class="create-btn">+ Create Game</a>
+  </div>
+
+  <!-- Games to Join -->
+  <div class="section section-join">
+    <div class="section-heading">
+      <div class="dot"></div>
+      <h2>Games to Join</h2>
+      <span class="count">3</span>
+    </div>
+    <div class="card-grid">
+
+      <div class="game-card">
+        <div class="card-name">Friday Night Showdown</div>
+        <div class="card-id">X7Q</div>
+
+        <div class="card-divider"></div>
+        <div class="card-meta">
+          <div class="card-meta-row">
+            <span class="card-label">Players</span>
+            <span class="card-value">3 waiting</span>
+          </div>
+          <div class="card-meta-row">
+            <span class="card-label">Board</span>
+            <span class="card-value">20 × 30</span>
+          </div>
+        </div>
+        <div class="state-badge state-joining"><span>Joining</span></div>
+      </div>
+
+      <div class="game-card">
+        <div class="card-name">Quick Match</div>
+        <div class="card-id">M2F</div>
+        <div class="card-divider"></div>
+        <div class="card-meta">
+          <div class="card-meta-row">
+            <span class="card-label">Players</span>
+            <span class="card-value">1 waiting</span>
+          </div>
+          <div class="card-meta-row">
+            <span class="card-label">Board</span>
+            <span class="card-value">10 × 10</span>
+          </div>
+        </div>
+        <div class="state-badge state-joining"><span>Joining</span></div>
+      </div>
+
+      <div class="game-card">
+        <div class="card-name">Weekend Warriors</div>
+        <div class="card-id">R4T</div>
+        <div class="card-divider"></div>
+        <div class="card-meta">
+          <div class="card-meta-row">
+            <span class="card-label">Players</span>
+            <span class="card-value">7 waiting</span>
+          </div>
+          <div class="card-meta-row">
+            <span class="card-label">Board</span>
+            <span class="card-value">50 × 75</span>
+          </div>
+        </div>
+        <div class="state-badge state-joining"><span>Joining</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- In Progress -->
+  <div class="section section-progress">
+    <div class="section-heading">
+      <div class="dot"></div>
+      <h2>In Progress</h2>
+      <span class="count">2</span>
+    </div>
+    <div class="card-grid">
+
+      <div class="game-card">
+        <div class="card-name">Battle Royale</div>
+        <div class="card-id">P9K</div>
+        <div class="card-divider"></div>
+        <div class="card-meta">
+          <div class="card-meta-row">
+            <span class="card-label">Players</span>
+            <span class="card-value">8 alive</span>
+          </div>
+          <div class="card-meta-row">
+            <span class="card-label">Board</span>
+            <span class="card-value">40 × 60</span>
+          </div>
+        </div>
+        <div class="state-badge state-eating"><span>Eating</span></div>
+      </div>
+
+      <div class="game-card">
+        <div class="card-name">Chaos Mode</div>
+        <div class="card-id">D3N</div>
+        <div class="card-divider"></div>
+        <div class="card-meta">
+          <div class="card-meta-row">
+            <span class="card-label">Players</span>
+            <span class="card-value">2 alive</span>
+          </div>
+          <div class="card-meta-row">
+            <span class="card-label">Board</span>
+            <span class="card-value">20 × 20</span>
+          </div>
+        </div>
+        <div class="state-badge state-battle"><span>⚔ Battle</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Completed -->
+  <div class="section section-completed">
+    <div class="section-heading">
+      <div class="dot"></div>
+      <h2>Completed</h2>
+      <span class="count">14</span>
+    </div>
+    <div class="card-grid">
+
+      <div class="game-card">
+        <div class="card-name">Thursday Chaos</div>
+        <div class="card-id">H8W</div>
+        <div class="card-divider"></div>
+        <div class="card-winner"><span class="label">Winner: </span>Alice</div>
+        <div class="card-meta">
+          <div class="card-meta-row">
+            <span class="card-label">Players</span>
+            <span class="card-value">6</span>
+          </div>
+          <div class="card-meta-row">
+            <span class="card-label">Ended</span>
+            <span class="card-value">3 days ago</span>
+          </div>
+        </div>
+        <div class="state-badge state-gameover"><span>Game Over</span></div>
+      </div>
+
+      <div class="game-card">
+        <div class="card-name">Test Run</div>
+        <div class="card-id">Y8C</div>
+        <div class="card-divider"></div>
+        <div class="card-winner"><span class="label">Winner: </span>Bob</div>
+        <div class="card-meta">
+          <div class="card-meta-row">
+            <span class="card-label">Players</span>
+            <span class="card-value">4</span>
+          </div>
+          <div class="card-meta-row">
+            <span class="card-label">Ended</span>
+            <span class="card-value">5 days ago</span>
+          </div>
+        </div>
+        <div class="state-badge state-gameover"><span>Game Over</span></div>
+      </div>
+
+      <div class="game-card">
+        <div class="card-name">Weekend War</div>
+        <div class="card-id">G6V</div>
+        <div class="card-divider"></div>
+        <div class="card-winner"><span class="label">Winner: </span>Carol</div>
+        <div class="card-meta">
+          <div class="card-meta-row">
+            <span class="card-label">Players</span>
+            <span class="card-value">12</span>
+          </div>
+          <div class="card-meta-row">
+            <span class="card-label">Ended</span>
+            <span class="card-value">8 days ago</span>
+          </div>
+        </div>
+        <div class="state-badge state-gameover"><span>Game Over</span></div>
+      </div>
+
+      <div class="game-card" style="opacity:0.5;border-style:dashed;display:flex;align-items:center;justify-content:center;min-height:100px;">
+        <span style="font-family:var(--font-display);font-size:0.65rem;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase">11 more...</span>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
