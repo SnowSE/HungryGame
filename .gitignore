@@ -372,3 +372,6 @@ FodyWeavers.xsd
 
 # Foolhearty: ignore connection info files
 clients/foolhearty/connectionInfo_Client*.txt
+
+# Ignore .dotnet folder which can contain runtime state and is not needed for development
+.dotnet/

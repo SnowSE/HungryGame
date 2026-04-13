@@ -251,3 +251,7 @@ app.MapPost("admin/logout", (AdminLogoutRequest req, AdminTokenService adminToke
 }).RequireRateLimiting("fixed");
 
 app.Run();
+
+public partial class Program
+{
+}
