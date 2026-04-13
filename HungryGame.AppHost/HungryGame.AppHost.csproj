@@ -14,4 +14,8 @@
     <ProjectReference Include="..\HungryGame\HungryGame.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.Azure.AppService" Version="13.2.2" />
+  </ItemGroup>
+
 </Project>
