@@ -369,3 +369,6 @@ FodyWeavers.xsd
 .squad/sessions/
 # Squad: SubSquad activation file (local to this machine)
 .squad-workstream
+
+# Foolhearty: ignore connection info files
+clients/foolhearty/connectionInfo_Client*.txt

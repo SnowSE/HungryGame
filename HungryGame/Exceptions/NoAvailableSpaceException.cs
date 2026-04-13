@@ -1,5 +1,3 @@
-﻿using System.Runtime.Serialization;
-
 namespace HungryGame
 {
     [Serializable]
@@ -14,10 +12,6 @@ namespace HungryGame
         }
 
         public NoAvailableSpaceException(string? message, Exception? innerException) : base(message, innerException)
-        {
-        }
-
-        protected NoAvailableSpaceException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
     }

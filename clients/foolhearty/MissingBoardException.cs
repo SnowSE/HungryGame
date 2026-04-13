@@ -1,5 +1,3 @@
-﻿using System.Runtime.Serialization;
-
 namespace foolhearty
 {
     [Serializable]
@@ -14,10 +12,6 @@ namespace foolhearty
         }
 
         public MissingBoardException(string? message, Exception? innerException) : base(message, innerException)
-        {
-        }
-
-        protected MissingBoardException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
     }

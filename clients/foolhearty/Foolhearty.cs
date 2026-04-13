@@ -7,7 +7,6 @@ namespace foolhearty;
 public class Foolhearty : BasePlayerLogic
 {
     private readonly ILogger<Foolhearty> logger;
-    private int errorCount = 0;
     private int sleepTime = 2_000;
 
     public Foolhearty(ILogger<Foolhearty> logger, IConfiguration config) : base(config)
@@ -49,7 +48,11 @@ public class Foolhearty : BasePlayerLogic
                 var destination = acquireTarget(currentLocation, board);
                 var direction = inferDirection(currentLocation, destination);
             MOVE:
-                var moveResultString = await httpClient.GetStringAsync($"{url}/game/{_gameId}/move/{direction}?token={token}");
+                var moveResultString = await RetryOnTooManyRequests(
+                    () => httpClient.GetStringAsync($"{url}/game/{_gameId}/move/{direction}?token={token}"),
+                    cancellationTokenSource.Token,
+                    logger,
+                    "move");
                 var moveResultJson = JsonDocument.Parse(moveResultString).RootElement;
                 var currentRow = moveResultJson.GetProperty("newLocation").GetProperty("row").GetInt32();
                 var currentCol = moveResultJson.GetProperty("newLocation").GetProperty("column").GetInt32();

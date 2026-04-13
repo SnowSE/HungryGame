@@ -6,7 +6,7 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TechTalk.SpecFlow;
+using Reqnroll;
 
 namespace HungryTests.StepDefinitions
 {
@@ -41,7 +41,7 @@ namespace HungryTests.StepDefinitions
                         lastRandom = 0;
                     return lastRandom;
                 });
-                game = new GameLogic(loggerMock.Object, randomMock.Object);
+                game = new GameLogic(loggerMock.Object, randomMock.Object, TimeProvider.System);
                 context.Set(game);
             }
             return game;

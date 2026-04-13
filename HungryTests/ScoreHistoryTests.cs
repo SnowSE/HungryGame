@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
@@ -18,7 +19,7 @@ public class ScoreHistoryTests
         var logger = new Mock<ILogger<GameLogic>>();
         var random = new Mock<IRandomService>();
         random.Setup(r => r.Next(It.IsAny<int>())).Returns(0);
-        return new GameLogic(logger.Object, random.Object);
+        return new GameLogic(logger.Object, random.Object, TimeProvider.System);
     }
 
     // ── Task 1: initial state ───────────────────────────────────────────────
@@ -60,7 +61,7 @@ public class ScoreHistoryTests
         random.Setup(r => r.Next(3)).Returns(() => rowValues.Dequeue());
         random.Setup(r => r.Next(2)).Returns(() => colValues.Dequeue());
 
-        var game = new GameLogic(logger.Object, random.Object);
+        var game = new GameLogic(logger.Object, random.Object, TimeProvider.System);
         var token1 = game.JoinPlayer("Alice");
         var token2 = game.JoinPlayer("Bob");
         game.ConfigureGame(new NewGameInfo { NumRows = 3, NumColumns = 2 });

@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Text.Json;
 
 namespace foolhearty;
@@ -23,16 +25,19 @@ public abstract class BasePlayerLogic : IPlayerLogic
         url = config["SERVER"] ?? "https://hungrygame.azurewebsites.net";
         var gameId = config["GAME_ID"] ?? throw new InvalidOperationException(
             "GAME_ID environment variable is required. Set it to the ID of the game to join.");
-        token = await httpClient.GetStringAsync($"{url}/game/{gameId}/join?playerName={PlayerName}");
+        token = await RetryOnTooManyRequests(
+            () => httpClient.GetStringAsync($"{url}/game/{gameId}/join?playerName={PlayerName}"),
+            CancellationToken.None);
         _gameId = gameId;
     }
 
     public abstract Task PlayAsync(CancellationTokenSource cancellationTokenSource);
 
-
     protected async Task<bool> checkIfGameOver()
     {
-        return (await httpClient.GetStringAsync($"{url}/game/{_gameId}/state")) == "GameOver";
+        return (await RetryOnTooManyRequests(
+            () => httpClient.GetStringAsync($"{url}/game/{_gameId}/state"),
+            CancellationToken.None)) == "GameOver";
     }
 
     protected virtual string turn(string direction) => direction switch
@@ -87,7 +92,7 @@ public abstract class BasePlayerLogic : IPlayerLogic
 
         Location closest = findClosestPillToEat(curLocation, board, max);
 
-        if (closest == max)//e.g. didn't find a pill to eat...look for another player
+        if (closest == max)
         {
             closest = findNearestPlayerToAttack(curLocation, board, max, closest);
         }
@@ -155,19 +160,47 @@ public abstract class BasePlayerLogic : IPlayerLogic
         }
         return "left";
     }
+
     protected async Task waitForGameToStart(CancellationToken cancellationToken)
     {
-        var gameState = await httpClient.GetStringAsync($"{url}/game/{_gameId}/state");
+        var gameState = await RetryOnTooManyRequests(
+            () => httpClient.GetStringAsync($"{url}/game/{_gameId}/state", cancellationToken),
+            cancellationToken);
         while (gameState == "Joining" || gameState == "GameOver")
         {
             await Task.Delay(2_000, cancellationToken);
-            gameState = await httpClient.GetStringAsync($"{url}/game/{_gameId}/state", cancellationToken);
+            gameState = await RetryOnTooManyRequests(
+                () => httpClient.GetStringAsync($"{url}/game/{_gameId}/state", cancellationToken),
+                cancellationToken);
         }
     }
 
     protected async Task<List<Cell>> getBoardAsync()
     {
-        var boardString = await httpClient.GetStringAsync($"{url}/game/{_gameId}/board");
+        var boardString = await RetryOnTooManyRequests(
+            () => httpClient.GetStringAsync($"{url}/game/{_gameId}/board"),
+            CancellationToken.None);
         return JsonSerializer.Deserialize<IEnumerable<Cell>>(boardString)?.ToList() ?? throw new MissingBoardException();
+    }
+
+    protected async Task<T> RetryOnTooManyRequests<T>(
+        Func<Task<T>> action,
+        CancellationToken cancellationToken,
+        ILogger? logger = null,
+        string operation = "request")
+    {
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                return await action();
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)
+            {
+                logger?.LogWarning(ex, "Received 429 during {operation}. Retrying immediately.", operation);
+            }
+        }
     }
 }

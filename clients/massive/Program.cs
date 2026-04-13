@@ -1,11 +1,8 @@
 ﻿using massive;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using System.Reflection;
-
-
 await Host.CreateDefaultBuilder(args)
-    .UseContentRoot(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location))
+    .UseContentRoot(AppContext.BaseDirectory)
     .ConfigureLogging(logging =>
     {
 

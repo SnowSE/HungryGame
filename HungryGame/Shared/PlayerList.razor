@@ -111,7 +111,7 @@
                 <tbody>
                     @{
                         var rank = 0;
-                        var players = gameInfo.IsGameOver
+                        IEnumerable<RedactedPlayer> players = gameInfo.IsGameOver
                             ? gameInfo.GetPlayersByGameOverRank()
                             : gameInfo.GetPlayersByScoreDescending();
                         if (viewMode == ViewMode.Top5)

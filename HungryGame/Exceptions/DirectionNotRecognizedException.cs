@@ -1,5 +1,3 @@
-﻿using System.Runtime.Serialization;
-
 namespace HungryGame
 {
     [Serializable]
@@ -16,11 +14,5 @@ namespace HungryGame
         public DirectionNotRecognizedException(string? message, Exception? innerException) : base(message, innerException)
         {
         }
-
-        protected DirectionNotRecognizedException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
-
-
 }

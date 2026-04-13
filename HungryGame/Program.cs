@@ -1,11 +1,7 @@
 using HungryGame;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Prometheus;
 using Scalar.AspNetCore;
-using Serilog;
-using Serilog.Exceptions;
-using Serilog.Sinks.Loki;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -32,6 +28,7 @@ builder.Services.AddRateLimiter(options =>
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IRandomService, SystemRandomService>();
 builder.Services.AddSingleton<AdminTokenService>();
 builder.Services.AddSingleton<IGameIdStrategy, ShortRandomIdStrategy>();
@@ -42,11 +39,6 @@ builder.Services.AddCors();
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GameExceptionHandler>();
-
-builder.Host.UseSerilog((context, loggerConfig) => {
-    loggerConfig.WriteTo.Console()
-    .Enrich.WithExceptionDetails();
-});
 
 var app = builder.Build();
 
@@ -118,7 +110,7 @@ app.MapGet("games", (GameRegistry registry) =>
         i.Id,
         i.Name,
         State = i.Game.CurrentGameState.ToString(),
-        PlayerCount = i.Game.GetPlayersByScoreDescending().Count(),
+        PlayerCount = i.Game.PlayerCount,
         i.Game.MaxRows,
         i.Game.MaxCols,
         i.CreatedAt,
@@ -132,14 +124,22 @@ app.MapGet("games", (GameRegistry registry) =>
 app.MapPost("games", (CreateGameRequest req, GameRegistry registry, AdminTokenService adminTokens) =>
 {
     bool isAdmin = adminTokens.IsValid(req.AdminToken);
+    const int MinRows = 1;
+    const int MinCols = 1;
     const int MaxUserRows = 100;
     const int MaxUserCols = 150;
+
+    if (req.NumRows < MinRows || req.NumCols < MinCols)
+        return Results.BadRequest($"Board size must be at least {MinRows}x{MinCols}.");
 
     if (!isAdmin && (req.NumRows > MaxUserRows || req.NumCols > MaxUserCols))
         return Results.BadRequest($"Board size capped at {MaxUserRows}x{MaxUserCols} for user-created games.");
 
     if (string.IsNullOrWhiteSpace(req.Name))
         return Results.BadRequest("Game name is required.");
+
+    if (req.IsTimed && (!req.TimeLimitMinutes.HasValue || req.TimeLimitMinutes.Value < 1))
+        return Results.BadRequest("Timed games require a positive time limit in minutes.");
 
     var instance = registry.CreateGame(
         req.Name.Trim(),

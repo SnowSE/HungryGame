@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
@@ -19,7 +20,8 @@ public class GameRegistryTests
         return new GameRegistry(
             new ShortRandomIdStrategy(),
             logger.Object,
-            random.Object);
+            random.Object,
+            TimeProvider.System);
     }
 
     [Test]
@@ -33,6 +35,16 @@ public class GameRegistryTests
         instance.Id.Should().HaveLength(3);
         instance.CompletedAt.Should().BeNull();
         instance.Game.Should().NotBeNull();
+    }
+
+    [Test]
+    public void CreateGame_WithInvalidDimensions_Throws()
+    {
+        var registry = MakeRegistry();
+
+        var act = () => registry.CreateGame("Invalid", "creator-token-abc", 0, 30);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Test]

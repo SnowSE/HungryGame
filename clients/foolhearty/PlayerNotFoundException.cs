@@ -1,5 +1,3 @@
-﻿using System.Runtime.Serialization;
-
 namespace foolhearty
 {
     [Serializable]
@@ -14,10 +12,6 @@ namespace foolhearty
         }
 
         public PlayerNotFoundException(string? message, Exception? innerException) : base(message, innerException)
-        {
-        }
-
-        protected PlayerNotFoundException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
     }
